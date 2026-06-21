@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         萬能網頁複製與解除右鍵限制
+// @name         Universal-萬能網頁複製與解除右鍵限制
 // @namespace    https://github.com/
 // @version      1.0
 // @description  自動解除任何網頁的複製限制、右鍵選單限制、文字選取限制，並提供選單自訂強制解除模式

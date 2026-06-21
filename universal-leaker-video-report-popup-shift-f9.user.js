@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         內鬼影片一鍵檢舉(Popup表單版)-Shift+F9
+// @name         Universal-內鬼影片一鍵檢舉-Shift-F9
 // @namespace    http://tampermonkey.net/
 // @version      1.2.2
 // @description  Shift+F9出現中央popup，由表單輸入內容，點寄出才開 Gmail

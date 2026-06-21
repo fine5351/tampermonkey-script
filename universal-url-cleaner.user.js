@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         網址去追蹤與重定向淨化器
+// @name         Universal-網址去追蹤與重定向淨化器
 // @namespace    https://github.com/
 // @version      1.0
 // @description  自動清除網址中的追蹤參數（如 utm_*, fbclid 等），並繞過各大平台的外鏈重定向警告頁面（如知乎、簡書、微博、CSDN 等）直接直達目標網站

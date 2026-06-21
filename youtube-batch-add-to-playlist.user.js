@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         YouTube 批量加入播放清單 (適配全新介面版)
+// @name         YouTube-批量加入播放清單
 // @namespace    http://tampermonkey.net/
 // @version      5.0
 // @description  支援 2024 最新 yt-list-item-view-model 結構，純實體按鈕

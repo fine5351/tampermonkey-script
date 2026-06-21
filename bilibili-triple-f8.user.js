@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Bilibili F8 三連
+// @name         Bilibili-三連-F8
 // @namespace    http://tampermonkey.net/
 // @version      4.2
-// @description  F8 一鍵 B站三連：點贊、收藏到默認、分享到動態自動發布（每步驟皆為 function）
+// @description  F8 一鍵 B 站 三連：點贊、收藏到默認、分享到動態自動發布（每步驟皆為 function）
 // @match        https://www.bilibili.com/video/*
 // @match        https://www.bilibili.com/list/*
 // @match        https://t.bilibili.com/share/card/index?*

@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         HoYoLAB 遊戲四合一自動簽到助手
+// @name         HoYoLAB-遊戲四合一自動簽到助手
 // @namespace    https://github.com/
 // @version      1.0
 // @description  自動簽到 Genshin, Star Rail, Honkai 3rd, ZZZ，支援自訂時間與通知

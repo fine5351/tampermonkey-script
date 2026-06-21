@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         B站 - 直播自動點贊 - F8
+// @name         Bilibili-直播自動點贊-F8
 // @namespace    http://tampermonkey.net/
 // @version      0.2
 // @description  每5秒自動點一次like-btn按鈕，僅限直播間

@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         B站 - 一鍵檢舉全自動 - Shift+F8
+// @name         Bilibili-一鍵檢舉全自動-Shift-F8
 // @namespace    https://bilibili.com/
 // @version      1.8
 // @description  Shift+F9 自動完成舉報流程：點擊舉報、選理由、填描述、點提交

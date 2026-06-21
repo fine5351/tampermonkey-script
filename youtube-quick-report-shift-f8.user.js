@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         YouTube 快速檢舉Shift+F8
+// @name         YouTube-快速檢舉-Shift-F8
 // @namespace    http://tampermonkey.net/
 // @version      1.1
 // @description  自動完成 YouTube 錯誤資訊檢舉流程（散佈官方未公布資訊, 是散佈錯誤資訊的行為）

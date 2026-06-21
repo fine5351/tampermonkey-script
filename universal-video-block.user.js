@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         VideoBlock 影片過濾助手
+// @name         Universal-VideoBlock影片過濾助手
 // @namespace    https://github.com/
 // @version      1.1
 // @description  全站過濾並屏蔽 unwanted 影片，支援自訂關鍵字、UP主/頻道、時長過濾、廣告淨化與自訂網站規則
@@ -661,7 +661,7 @@
                             <div class="yb-input-row">
                                 <div>
                                     <span class="yb-label">淨化模式 (廣告 & 推廣過濾)</span>
-                                    <span class="yb-input-desc">自動過濾 B站廣告與直播、YouTube廣告與 Shorts 影片</span>
+                                    <span class="yb-input-desc">自動過濾 B 站廣告與直播、YouTube 廣告與 Shorts 影片</span>
                                 </div>
                                 <label class="yb-switch">
                                     <input type="checkbox" id="yb-clean-mode" ${settings.cleanMode ? 'checked' : ''}>
@@ -670,9 +670,9 @@
                             </div>
                         </div>
                         <div class="yb-form-group" id="yb-bili-only-group">
-                            <label class="yb-label">Bilibili 專屬：分區名稱關鍵字 (用 | 分隔)</label>
+                            <label class="yb-label">B 站專屬：分區名稱關鍵字 (用 | 分隔)</label>
                             <textarea class="yb-textarea" id="yb-bili-sec-kw" placeholder="例如: 游戏 | 动画">${settings.biliSection}</textarea>
-                            <div class="yb-hint">屏蔽指定B站分區的影片。會自動向 B站 API 查詢影片所屬分區。</div>
+                            <div class="yb-hint">屏蔽指定 B 站分區的影片。會自動向 B 站 API 查詢影片所屬分區。</div>
                         </div>
                     </div>
 

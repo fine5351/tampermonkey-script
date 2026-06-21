@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Bilibili Festival F8 三連
+// @name         Bilibili-Festival-三連-F8
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  F8 一鍵 B站 Festival 頁面三連：點贊、收藏到默認、分享到動態自動發布
+// @description  F8 一鍵 B 站 Festival 頁面三連：點贊、收藏到默認、分享到動態自動發布
 // @match        https://www.bilibili.com/festival/*
 // @match        https://t.bilibili.com/share/card/index?*
 // @grant        none
