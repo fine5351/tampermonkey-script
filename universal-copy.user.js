@@ -12,7 +12,7 @@
 // @grant        GM_setValue
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
 
     // Global toggle for Aggressive Force Mode
@@ -54,7 +54,7 @@
         `;
         document.documentElement.appendChild(style);
     }
-    
+
     // Inject style immediately at document-start (on documentElement)
     if (document.documentElement) {
         injectStyles();
@@ -72,7 +72,7 @@
     // By calling stopPropagation in the capture phase, we prevent the webpage's custom scripts
     // from intercepting the event and executing e.preventDefault() to block the action.
     const bypassEvents = ['contextmenu', 'copy', 'cut', 'selectstart', 'dragstart'];
-    
+
     function eventHandler(e) {
         e.stopPropagation();
         return true;
@@ -104,12 +104,12 @@
         const allElements = document.getElementsByTagName('*');
         for (let i = 0; i < allElements.length; i++) {
             const el = allElements[i];
-            
+
             // Clean common attribute-based locks
             if (el.getAttribute('oncontextmenu')) el.removeAttribute('oncontextmenu');
             if (el.getAttribute('oncopy')) el.removeAttribute('oncopy');
             if (el.getAttribute('onselectstart')) el.removeAttribute('onselectstart');
-            
+
             // Clean absolute-positioned transparent overlays in Force Mode
             if (isForceMode) {
                 const style = window.getComputedStyle(el);
@@ -139,12 +139,12 @@
     // 4. Force Mode Aggressive Overrides
     if (isForceMode) {
         // Prevent keydown checks that disable Developer Tools or copy hotkeys
-        window.addEventListener('keydown', function(e) {
+        window.addEventListener('keydown', function (e) {
             // Allow Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+A, F12, Ctrl+Shift+I
             const key = e.key.toLowerCase();
             const isCopyPaste = (e.ctrlKey || e.metaKey) && ['c', 'v', 'x', 'a'].includes(key);
             const isDevTools = e.keyCode === 123 || ((e.ctrlKey || e.metaKey) && e.shiftKey && key === 'i');
-            
+
             if (isCopyPaste || isDevTools) {
                 e.stopPropagation();
                 return true;

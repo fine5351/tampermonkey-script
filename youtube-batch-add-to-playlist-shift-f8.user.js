@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         YouTube-批量加入播放清單
+// @name         YouTube-批量加入播放清單-Shift-F8
 // @namespace    http://tampermonkey.net/
 // @version      5.0
 // @description  支援 2024 最新 yt-list-item-view-model 結構，純實體按鈕
@@ -9,54 +9,6 @@
 
 (function () {
     'use strict';
-
-    // window.addEventListener('yt-navigate-finish', checkAndInjectButton);
-    // if (document.body) checkAndInjectButton();
-    // else document.addEventListener('DOMContentLoaded', checkAndInjectButton);
-
-    // function checkAndInjectButton() {
-    //     const isWatchPage = window.location.pathname.includes('/watch');
-    //     const existingBtn = document.getElementById('my-batch-save-btn');
-
-    //     if (!isWatchPage) {
-    //         if (existingBtn) existingBtn.style.display = 'none';
-    //         return;
-    //     }
-
-    //     if (!existingBtn) {
-    //         createFloatingButton();
-    //     } else {
-    //         existingBtn.style.display = 'block';
-    //     }
-    // }
-
-    // function createFloatingButton() {
-    //     const btn = document.createElement('button');
-    //     btn.id = 'my-batch-save-btn';
-    //     btn.innerHTML = '📚 批量加入清單';
-    //     btn.style.cssText = `
-    //         position: fixed; bottom: 20px; left: 20px; z-index: 9999999;
-    //         background: #3ea6ff; color: #000; border: none; border-radius: 20px;
-    //         padding: 10px 16px; font-weight: bold; font-size: 14px;
-    //         cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-    //         transition: transform 0.2s, background 0.2s;
-    //     `;
-
-    //     btn.onmouseover = () => { btn.style.background = '#65b8ff'; btn.style.transform = 'scale(1.05)'; };
-    //     btn.onmouseout = () => { btn.style.background = '#3ea6ff'; btn.style.transform = 'scale(1)'; };
-
-    //     btn.onclick = async () => {
-    //         btn.innerText = '處理中...';
-    //         btn.style.pointerEvents = 'none';
-    //         await initBatchSave();
-    //         setTimeout(() => {
-    //             btn.innerText = '📚 批量加入清單';
-    //             btn.style.pointerEvents = 'auto';
-    //         }, 2000);
-    //     };
-
-    //     document.body.appendChild(btn);
-    // }
 
     async function initBatchSave() {
         let playlists = getPlaylistsFromDOM();
@@ -304,7 +256,7 @@
 
     // 變更為 Shift + F8 啟動
     window.addEventListener('keydown', function (e) {
-        if (e.key === 'F8') {
+        if (e.shiftKey && e.key === 'F8') {
             initBatchSave();
         }
     });

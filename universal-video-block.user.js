@@ -70,7 +70,7 @@
     }
 
     const activeRule = getActiveRule();
-    
+
     // Early exit if no active rule matches the current site to ensure zero performance overhead
     if (!activeRule) {
         return;
@@ -121,7 +121,7 @@
             this.sectionKeywords = [];
             this.minDuration = 0;
             this.cleanMode = false;
-            
+
             this.tidCache = new Map();
             this.observer = null;
             this.debounceTimer = null;
@@ -138,7 +138,7 @@
                         if (node.nodeType !== Node.ELEMENT_NODE) return false;
                         // Match card selector or clean-mode elements
                         return node.querySelector(this.rule.cardSelector) ||
-                               node.classList.contains(this.rule.cardSelector.split(',')[0].replace('.', '').trim());
+                            node.classList.contains(this.rule.cardSelector.split(',')[0].replace('.', '').trim());
                     })
                 );
 
@@ -707,7 +707,7 @@
             const tabKw = document.getElementById('yb-tab-btn-kw');
             const tabClean = document.getElementById('yb-tab-btn-clean');
             const tabCustom = document.getElementById('yb-tab-btn-custom');
-            
+
             const contentKw = document.getElementById('yb-tab-content-kw');
             const contentClean = document.getElementById('yb-tab-content-clean');
             const contentCustom = document.getElementById('yb-tab-content-custom');
