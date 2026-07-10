@@ -170,7 +170,10 @@
     // Logging helper
     function addLog(text) {
         const logs = GM_getValue('logs', []);
-        const timestamp = new Date().toLocaleTimeString();
+
+        // 獲取目前的年月日與時間（格式例如：2026/7/10 21:14:00）
+        const timestamp = new Date().toLocaleString('zh-TW', { hour12: false });
+
         logs.unshift(`[${timestamp}] ${text}`);
         if (logs.length > 50) logs.pop(); // Keep last 50 logs
         GM_setValue('logs', logs);
