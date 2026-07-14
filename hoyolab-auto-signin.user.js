@@ -243,6 +243,16 @@
 
         addLog(`=== 簽到結束: 成功 ${successCount}, 已簽到 ${alreadyCount}, 失敗 ${failCount}, 未登入 ${notLoggedInCount} ===`);
 
+        // 判定今日簽到是否全部順利完成 (無失敗且無未登入錯誤)
+        const hasFailed = failCount > 0 || notLoggedInCount > 0;
+        if (!hasFailed) {
+            const today = new Date().toISOString().split('T')[0];
+            GM_setValue('last_run_date', today);
+            if (!isManual) {
+                addLog(`今日所有啟用遊戲已全部簽到成功，今日將不再自動執行。`);
+            }
+        }
+
         // Trigger Notifications
         if (successCount > 0) {
             Toast.show(`成功簽到 ${successCount} 個遊戲！`, 'success');
@@ -270,7 +280,32 @@
 
         // Check if current time is past signTime
         if (now.getHours() > signHour || (now.getHours() === signHour && now.getMinutes() >= signMinute)) {
-            GM_setValue('last_run_date', today);
+            // 讀取/初始化每日重試計數器
+            const autoRunCountToday = GM_getValue('auto_run_count_today', { date: '', count: 0 });
+            if (autoRunCountToday.date !== today) {
+                autoRunCountToday.date = today;
+                autoRunCountToday.count = 0;
+            }
+
+            const maxRetries = 10; // 每天最多自動重試 10 次
+            if (autoRunCountToday.count >= maxRetries) {
+                // 如果已經達到上限，今天就不再自動嘗試，並在日誌記錄一次（如果還沒記錄過上限的話）
+                const reachedLogKey = 'reached_retry_limit_' + today;
+                if (!GM_getValue(reachedLogKey, false)) {
+                    addLog(`已達每日自動簽到最大重試次數 (${maxRetries} 次)，今日暫停自動重試。`);
+                    GM_setValue(reachedLogKey, true);
+                }
+                return;
+            }
+
+            autoRunCountToday.count++;
+            GM_setValue('auto_run_count_today', autoRunCountToday);
+
+            // 清除之前的重試上限 log 標記（以便隔日或重設時重新記錄）
+            GM_setValue('reached_retry_limit_' + today, false);
+
+            addLog(`觸發自動簽到 (今日第 ${autoRunCountToday.count} 次嘗試)...`);
+
             // Run check-in silently after a random delay (0-15s) to avoid bot-like pattern
             setTimeout(() => {
                 runCheckIn(false);
@@ -706,6 +741,11 @@
     setTimeout(() => {
         addFloatingButton();
         checkAndAutoTrigger();
+
+        // 每 10 分鐘 (600,000 毫秒) 重新檢查一次自動簽到狀態
+        setInterval(() => {
+            checkAndAutoTrigger();
+        }, 10 * 60 * 1000);
     }, 2000); // 2 second delay to let page stabilize
 
 })();
