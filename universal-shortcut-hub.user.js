@@ -1,12 +1,14 @@
 // ==UserScript==
 // @name         Universal-全域快捷鍵速查與指揮中心-Alt-Shift-Slash
 // @namespace    https://github.com/
-// @version      1.5
+// @version      1.6
 // @description  按 F1、Alt+/、Alt+Shift+/ 或點擊右下角 ⚡ 圖示隨時呼叫半透明懸浮面板，即時偵測目前網址並列出已生效的所有 UserScript 快捷鍵與操作指南
 // @author       Antigravity
 // @match        *://*/*
 // @match        *://*.youtube.com/*
 // @match        *://*.bilibili.com/*
+// @match        *://*.threads.net/*
+// @match        *://*.threads.com/*
 // @include      *
 // @run-at       document-end
 // @grant        GM_registerMenuCommand
@@ -18,12 +20,21 @@
     // --- 快捷鍵庫定義 ---
     const SCRIPT_REGISTRY = [
         {
+            category: "Threads 專用",
+            matches: (h) => h.includes('threads.net') || h.includes('threads.com'),
+            items: [
+                { key: "Alt + B", name: "筆戰戰情室", desc: "呼叫 AI 言詞交鋒助手，以米哈遊辯論哲學解構邏輯漏洞並產生 3 大回擊選項" },
+                { key: "常駐按鈕", name: "⚔️ 反駁此留言", desc: "在每則串文卡片一鍵帶入目標言論至戰情室並提取串文脈絡" }
+            ]
+        },
+        {
             category: "Bilibili 專用",
             matches: (h, p) => h.includes('bilibili.com') && (p.includes('/video/') || p.includes('/list/') || p.includes('/festival/')),
             items: [
                 { key: "F8", name: "一鍵三連", desc: "自動依序點贊、勾選默認收藏夾、分享到動態並發布" },
                 { key: "Shift + F9", name: "內鬼/未公布資訊檢舉", desc: "一鍵直達稿件舉報並填寫「散布未公布資訊」理由" },
-                { key: "Alt + S", name: "影片原圖截圖", desc: "擷取當前播放影格原始解析度無損 PNG 並自動命名下載" }
+                { key: "Alt + S", name: "影片原圖截圖", desc: "擷取當前播放影格原始解析度無損 PNG 並自動命名下載" },
+                { key: "常駐按鈕", name: "⚔️ 評論筆戰", desc: "在評論區每則留言旁一鍵帶入至戰情室解構並填入回覆" }
             ]
         },
         {
@@ -70,6 +81,8 @@
                 { key: "Shift + F9", name: "米哈遊爆料/內鬼檢舉", desc: "呼叫全域彈窗產生發送給米哈遊客服與法務之 Gmail 檢舉信" },
                 { key: "常駐背景", name: "網址去追蹤與外鏈直達", desc: "自動移除 utm_*, fbclid 參數，繞過各平台「即將離開」警告頁" },
                 { key: "常駐背景", name: "解除複製與右鍵限制", desc: "強制開啟 user-select: text，防止網頁反選取與限制選單" },
+                { key: "Alt + B", name: "全網 AI 筆戰戰情室", desc: "融合米哈遊辯論哲學，劃詞反駁或解構全網任何言論並產出 3 大回擊選項" },
+                { key: "滑鼠劃詞", name: "⚔️ 劃詞反駁徽章", desc: "反白選取網頁任何文字即浮現戰鬥徽章，一鍵發動邏輯回擊" },
                 { key: "常駐背景", name: "VideoBlock 影片過濾", desc: "自訂關鍵字與頻道過濾屏蔽，支援右下角 🛡️ 圖示或選單設定" },
                 { key: "常駐背景", name: "簡繁自動翻譯與字體調整", desc: "指定網域自動簡轉繁與字體縮放，支援選單開啟設定" }
             ]
