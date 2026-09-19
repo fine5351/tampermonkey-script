@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         HoYoLAB-遊戲四合一自動簽到助手
+// @name         HoYoLAB-遊戲四合一自動簽到與禮包兌換助手
 // @namespace    https://github.com/
-// @version      1.0
-// @description  自動簽到 Genshin, Star Rail, Honkai 3rd, ZZZ，支援自訂時間與通知
+// @version      1.1
+// @description  自動簽到 Genshin, Star Rail, Honkai 3rd, ZZZ，支援自訂時間、通知與前瞻/活動禮包兌換碼快速開啟兌換
 // @author       Antigravity
 // @match        https://*.hoyolab.com/*
 // @match        https://*.youtube.com/*
@@ -15,6 +15,8 @@
 // @grant        GM_notification
 // @connect      sg-hk4e-api.hoyolab.com
 // @connect      sg-public-api.hoyolab.com
+// @connect      sg-hkrpg-api.hoyolab.com
+// @connect      sg-act-nap-api.hoyolab.com
 // @run-at       document-end
 // ==/UserScript==
 
@@ -646,6 +648,7 @@
                     </div>
 
                     <div class="hy-modal-buttons">
+                        <button class="hy-btn hy-btn-secondary" id="hy-btn-redeem" style="background:#f59e0b;color:#fff;">🎁 禮包兌換碼</button>
                         <button class="hy-btn hy-btn-secondary" id="hy-btn-manual">立即執行簽到</button>
                         <button class="hy-btn hy-btn-primary" id="hy-btn-save">儲存設定</button>
                     </div>
@@ -659,6 +662,11 @@
             document.getElementById('hy-close-btn').addEventListener('click', () => this.hide());
             this.modal.addEventListener('click', (e) => {
                 if (e.target === this.modal) this.hide();
+            });
+
+            document.getElementById('hy-btn-redeem').addEventListener('click', () => {
+                this.hide();
+                openRedeemModal();
             });
 
             document.getElementById('hy-btn-save').addEventListener('click', () => {
@@ -715,6 +723,93 @@
         }
     };
 
+    // ==========================================
+    // 禮包兌換碼小助手 (Redeem Code Assistant)
+    // ==========================================
+    const DEFAULT_CODES = {
+        ys: ['GENSHINGIFT'],
+        sr: ['STARRAILGIFT'],
+        zzz: ['ZZZFREE', 'ZENLESSGIFT']
+    };
+
+    function openRedeemModal() {
+        const modalId = 'hy-redeem-modal';
+        if (document.getElementById(modalId)) return;
+
+        const overlay = document.createElement('div');
+        overlay.id = modalId;
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:1000002;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);';
+
+        const box = document.createElement('div');
+        box.style.cssText = 'background:#fff;width:90%;max-width:480px;border-radius:12px;padding:24px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.2);color:#333;font-family:sans-serif;box-sizing:border-box;';
+        box.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid #eee;padding-bottom:10px;">
+                <div style="font-size:17px;font-weight:bold;color:#1e293b;">🎁 HoYoverse 禮包兌換碼小助手</div>
+                <span id="hy-redeem-close" style="cursor:pointer;font-size:22px;color:#94a3b8;line-height:1;">&times;</span>
+            </div>
+            <div style="font-size:13px;color:#64748b;margin-bottom:12px;">
+                快速跳轉官方兌換頁面並自動帶入最新前瞻直播 / 常駐兌換碼：
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+                    <div>
+                        <div style="font-weight:600;color:#0f172a;">原神 (Genshin)</div>
+                        <div style="font-size:12px;color:#64748b;">常用碼: GENSHINGIFT</div>
+                    </div>
+                    <button class="hy-redeem-btn" data-game="ys" style="padding:6px 14px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:bold;">開啟兌換頁</button>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+                    <div>
+                        <div style="font-weight:600;color:#0f172a;">崩壞：星穹鐵道 (Star Rail)</div>
+                        <div style="font-size:12px;color:#64748b;">常用碼: STARRAILGIFT</div>
+                    </div>
+                    <button class="hy-redeem-btn" data-game="sr" style="padding:6px 14px;background:#8b5cf6;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:bold;">開啟兌換頁</button>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+                    <div>
+                        <div style="font-weight:600;color:#0f172a;">絕區零 (ZZZ)</div>
+                        <div style="font-size:12px;color:#64748b;">常用碼: ZZZFREE, ZENLESSGIFT</div>
+                    </div>
+                    <button class="hy-redeem-btn" data-game="zzz" style="padding:6px 14px;background:#f59e0b;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:bold;">開啟兌換頁</button>
+                </div>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">自訂最新兌換碼 (前瞻直播碼):</label>
+                <input id="hy-custom-cdkey" type="text" placeholder="輸入自訂直播碼，如: 3S3X4..." style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+            </div>
+            <div style="text-align:right;">
+                <button id="hy-redeem-cancel" style="padding:6px 16px;background:#f1f5f9;color:#475569;border:none;border-radius:6px;font-size:13px;cursor:pointer;">關閉</button>
+            </div>
+        `;
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        function close() { overlay.remove(); }
+        document.getElementById('hy-redeem-close').onclick = close;
+        document.getElementById('hy-redeem-cancel').onclick = close;
+        overlay.onclick = (e) => { if (e.target === overlay) close(); };
+
+        box.querySelectorAll('.hy-redeem-btn').forEach(btn => {
+            btn.onclick = () => {
+                const game = btn.dataset.game;
+                const customCode = document.getElementById('hy-custom-cdkey').value.trim();
+                const code = customCode || (DEFAULT_CODES[game] ? DEFAULT_CODES[game][0] : '');
+                let url = '';
+                if (game === 'ys') {
+                    url = `https://genshin.hoyoverse.com/zh-tw/gift?code=${encodeURIComponent(code)}`;
+                } else if (game === 'sr') {
+                    url = `https://hsr.hoyoverse.com/gift?code=${encodeURIComponent(code)}`;
+                } else if (game === 'zzz') {
+                    url = `https://zenless.hoyoverse.com/redemption?code=${encodeURIComponent(code)}`;
+                }
+                if (url) {
+                    window.open(url, '_blank');
+                    Toast.show(`已在新分頁開啟 ${GAMES[game]?.name || '官方'} 兌換頁！`, 'success');
+                }
+            };
+        });
+    }
+
     // Add floating button to HoYoLAB
     function addFloatingButton() {
         if (!location.hostname.includes('hoyolab.com')) return;
@@ -735,6 +830,10 @@
     // Initialize Menu Commands
     GM_registerMenuCommand("HoYoLAB 自動簽到設定", () => {
         SettingsUI.show();
+    });
+
+    GM_registerMenuCommand("🎁 禮包兌換碼小助手", () => {
+        openRedeemModal();
     });
 
     // Run check & add buttons

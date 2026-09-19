@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         小說鍵盤左右鍵翻頁
+// @name         小說鍵盤左右鍵翻頁與沉浸閱讀助手
 // @namespace    https://github.com/fine5351/
-// @version      1.2
-// @description  使用鍵盤方向鍵左、右來點擊上一章/頁、下一章/頁，支援自訂啟用網域清單管理
+// @version      2.0
+// @description  支援鍵盤左右鍵上一章/下一章翻頁、S 鍵啟動平滑自動滾動（到底部自動翻下一章）、R 鍵切換純淨沉浸閱讀模式
 // @author       fine5351 / Antigravity
 // @match        *://*/*
 // @run-at       document-start
@@ -30,7 +30,7 @@
     }
 
     // 註冊選單命令（在所有網頁均可打開設定）
-    GM_registerMenuCommand('⚙️ 小說翻頁網域設定', showSettings);
+    GM_registerMenuCommand('⚙️ 小說翻頁與閱讀設定', showSettings);
 
     // 如果網域不符合，就不執行翻頁監聽邏輯
     if (!isDomainMatched()) {
@@ -38,44 +38,189 @@
     }
 
     // ==========================================
+    // 狀態通知 Toast
+    // ==========================================
+    function showToast(msg) {
+        let toast = document.getElementById('ntp-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'ntp-toast';
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 40px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(30, 41, 59, 0.92);
+                color: #f8fafc;
+                padding: 10px 20px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 500;
+                z-index: 2147483646;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+                pointer-events: none;
+                transition: opacity 0.3s ease;
+                font-family: system-ui, sans-serif;
+            `;
+            document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.style.opacity = '1';
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => {
+            toast.style.opacity = '0';
+        }, 2200);
+    }
+
+    // ==========================================
     // 翻頁監聽邏輯
     // ==========================================
-    // 定義翻頁關鍵字清單（繁簡通用）
     const PREV_KEYWORDS = ['<', '上一話', '上一章', '上一頁', '上一页', '上页', '上章', '前一章', '前一頁', '前一页', 'Previous'];
     const NEXT_KEYWORDS = ['>', '下一話', '下一章', '下一頁', '下一页', '下页', '下章', '後一章', '后一章', '後一頁', '后一页', 'Next'];
 
+    function turnPage(keywords) {
+        const links = document.querySelectorAll('a');
+        for (const keyword of keywords) {
+            for (const link of links) {
+                const text = link.textContent.trim();
+                if (text === keyword || text.includes(keyword)) {
+                    link.click();
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // ==========================================
+    // 平滑自動滾動 (Auto Scroll)
+    // ==========================================
+    let isAutoScrolling = false;
+    let scrollSpeed = 1.8; // 每影格滾動像素
+    let scrollAnimId = null;
+    let isAtBottomTriggered = false;
+
+    function autoScrollStep() {
+        if (!isAutoScrolling) return;
+
+        window.scrollBy(0, scrollSpeed);
+
+        // 偵測是否已滾動至頁面最底部
+        const scrollBottom = window.innerHeight + window.scrollY;
+        const pageHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+
+        if (scrollBottom >= pageHeight - 30) {
+            if (!isAtBottomTriggered) {
+                isAtBottomTriggered = true;
+                showToast('🚀 已滾動到底部，自動切換下一章...');
+                setTimeout(() => {
+                    const success = turnPage(NEXT_KEYWORDS);
+                    if (!success) {
+                        toggleAutoScroll(false);
+                    }
+                }, 800);
+            }
+            return;
+        }
+
+        scrollAnimId = requestAnimationFrame(autoScrollStep);
+    }
+
+    function toggleAutoScroll(forceState) {
+        isAutoScrolling = forceState !== undefined ? forceState : !isAutoScrolling;
+        if (isAutoScrolling) {
+            isAtBottomTriggered = false;
+            showToast(`📜 自動滾動已啟動 (速度: ${scrollSpeed.toFixed(1)}) | S: 暫停, +/-: 調速`);
+            scrollAnimId = requestAnimationFrame(autoScrollStep);
+        } else {
+            if (scrollAnimId) cancelAnimationFrame(scrollAnimId);
+            showToast('⏸️ 自動滾動已暫停');
+        }
+    }
+
+    function adjustScrollSpeed(delta) {
+        scrollSpeed = Math.max(0.5, Math.min(10, scrollSpeed + delta));
+        showToast(`⚡ 滾動速度已調整為: ${scrollSpeed.toFixed(1)}`);
+    }
+
+    // ==========================================
+    // 純淨沉浸閱讀模式 (Reading Mode)
+    // ==========================================
+    let isReadingMode = false;
+    function toggleReadingMode() {
+        isReadingMode = !isReadingMode;
+        let style = document.getElementById('ntp-reading-style');
+
+        if (isReadingMode) {
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'ntp-reading-style';
+                style.textContent = `
+                    body {
+                        background-color: #f6f4ec !important;
+                        color: #2c3e50 !important;
+                    }
+                    /* 限制主體閱讀寬度並置中 */
+                    #content, #chaptercontent, .content, .read-content, article, main, .text-content, .entry-content {
+                        max-width: 820px !important;
+                        margin: 0 auto !important;
+                        font-size: 20px !important;
+                        line-height: 1.85 !important;
+                        font-family: "PingFang TC", "Microsoft JhengHei", "Noto Serif CJK TC", serif !important;
+                    }
+                    /* 隱藏側邊廣告與多餘浮動條 */
+                    aside, .sidebar, .ad, .ads, [class*="advertisement"], [id*="advertisement"] {
+                        display: none !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            showToast('📖 已進入純淨沉浸閱讀模式 (R 鍵退出)');
+        } else {
+            if (style) style.remove();
+            showToast('📖 已退出沉浸閱讀模式');
+        }
+    }
+
+    // ==========================================
+    // 快捷鍵總控監聽
+    // ==========================================
     document.addEventListener('keydown', function (event) {
-        // 排除輸入框與可編輯區域
         const activeElement = document.activeElement;
         const tagName = activeElement ? activeElement.tagName.toLowerCase() : '';
         if (tagName === 'input' || tagName === 'textarea' || activeElement?.isContentEditable) {
             return;
         }
 
-        let targetKeywords = null;
+        // 左右鍵翻章節
         if (event.key === 'ArrowLeft') {
-            targetKeywords = PREV_KEYWORDS;
+            turnPage(PREV_KEYWORDS);
         } else if (event.key === 'ArrowRight') {
-            targetKeywords = NEXT_KEYWORDS;
+            turnPage(NEXT_KEYWORDS);
         }
-
-        if (!targetKeywords) {
-            return;
-        }
-
-        const links = document.querySelectorAll('a');
-        for (const keyword of targetKeywords) {
-            let found = false;
-            for (const link of links) {
-                const text = link.textContent.trim();
-                // 優先精確匹配，避免誤觸包含關鍵字的長文本
-                if (text === keyword || text.includes(keyword)) {
-                    link.click();
-                    found = true;
-                    break;
-                }
+        // S 鍵：切換自動滾動
+        else if (event.key === 's' || event.key === 'S') {
+            if (!event.ctrlKey && !event.altKey && !event.metaKey) {
+                event.preventDefault();
+                toggleAutoScroll();
             }
-            if (found) break;
+        }
+        // R 鍵：切換沉浸閱讀模式
+        else if (event.key === 'r' || event.key === 'R') {
+            if (!event.ctrlKey && !event.altKey && !event.metaKey) {
+                event.preventDefault();
+                toggleReadingMode();
+            }
+        }
+        // +/- 或 ↑/↓ 調速 (僅在自動滾動開啟時)
+        else if (isAutoScrolling) {
+            if (event.key === '+' || event.key === '=') {
+                event.preventDefault();
+                adjustScrollSpeed(0.5);
+            } else if (event.key === '-' || event.key === '_') {
+                event.preventDefault();
+                adjustScrollSpeed(-0.5);
+            }
         }
     });
 
