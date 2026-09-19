@@ -52,6 +52,14 @@
 - **快捷鍵設計**：快捷鍵監聽優先採用組合鍵（如 `Shift + F8`、`Shift + F9`），避免與瀏覽器通用快捷鍵或宿主網頁原生操作衝突。
 - **日誌與除錯**：`console.log` / `console.warn` / `console.error` 一律加上腳本名稱前綴（例如 `console.log("[VideoBlock] ...")`），便於在開發者工具中過濾除錯。
 
+### 3.5 快捷鍵集中管理與衝突防護規範 (Shortcut Hub Synchronization & Conflict Prevention)
+- **事前盤點與查閱義務 (Pre-check Audit)**：凡是**新增腳本、修改或增刪任何快捷鍵**時，動手前**必須先全面檢索專案內所有現有腳本代碼與 `universal-shortcut-hub.user.js` 中的 `SCRIPT_REGISTRY` 紀錄**。
+- **衝突防護原則 (Conflict Prevention & Context Awareness)**：
+  - 嚴格禁止在相同目標網域／生效範圍下配置重複或衝突的快捷鍵。
+  - 避免與瀏覽器預設快捷鍵（如 `Ctrl + S`、`Ctrl + W`、`Ctrl + T` 等）或目標網站原生常用操作衝突。
+  - 若不可避免需要在全域共用按鍵組合（例如輸入輔助與影片截圖），必須實作嚴密的上下文情境判斷（如檢查 `document.activeElement` 是否為輸入框、是否有選取文字等）；當情境不符時必須放行事件（嚴禁濫用 `e.preventDefault()` 與 `e.stopPropagation()`），確保其他腳本功能不受阻礙。
+- **Hub 同步義務 (Hub Synchronization Obligation)**：任何快捷鍵新增或調整完成後，**必須同步更新 `universal-shortcut-hub.user.js` 中的 `SCRIPT_REGISTRY`**，確保使用者透過指揮中心（`Alt + Shift + /`）所查閱之清單永遠保持 100% 準確。
+
 ---
 
 ## 4. 檔案命名與目錄結構 (File Conventions)

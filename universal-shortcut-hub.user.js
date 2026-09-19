@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Universal-全域快捷鍵速查與指揮中心-Alt-Shift-Slash
 // @namespace    https://github.com/
-// @version      1.0
+// @version      1.1
 // @description  按 Alt+Shift+/（或 Ctrl+Shift+K）隨時呼叫半透明懸浮面板，即時偵測目前網址並列出已生效的所有 UserScript 快捷鍵與操作指南
 // @author       Antigravity
 // @match        *://*/*
@@ -51,10 +51,19 @@
             ]
         },
         {
+            category: "繁簡中文輸入與轉換",
+            matches: () => true,
+            items: [
+                { key: "Alt + S", name: "輸入框繁轉簡 / 選字複製", desc: "在輸入框按鍵原地轉簡體（保留 Ctrl+Z）；選取文字按鍵自動轉簡體並複製" },
+                { key: "Alt + Shift + S", name: "繁簡轉換工具箱", desc: "呼叫隨身浮動小視窗，支援即打即轉、純字形/詞彙模式切換與一鍵複製" },
+                { key: "Ctrl + Enter", name: "工具箱一鍵複製關閉", desc: "在繁簡轉換工具箱內快速複製簡體並自動關閉視窗" }
+            ]
+        },
+        {
             category: "全網通用常駐功能",
             matches: () => true,
             items: [
-                { key: "Alt + S", name: "HTML5 影片無損截圖", desc: "在任何包含 video 的網頁擷取原始影格並複製到剪貼簿" },
+                { key: "Alt + S", name: "HTML5 影片無損截圖", desc: "在任何包含 video 的網頁擷取原始影格並複製到剪貼簿（非輸入狀態時）" },
                 { key: "Shift + F9", name: "米哈遊爆料/內鬼檢舉", desc: "呼叫全域彈窗產生發送給米哈遊客服與法務之 Gmail 檢舉信" },
                 { key: "常駐背景", name: "網址去追蹤與外鏈直達", desc: "自動移除 utm_*, fbclid 參數，繞過各平台「即將離開」警告頁" },
                 { key: "常駐背景", name: "解除複製與右鍵限制", desc: "強制開啟 user-select: text，防止網頁反選取與限制選單" }
