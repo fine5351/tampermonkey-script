@@ -57,7 +57,7 @@
 ## 4. 檔案命名與目錄結構 (File Conventions)
 
 - **腳本命名格式**：
-  - 平台專用：`<platform>-<feature>[-<hotkey>].user.js`（例如 `bilibili-triple-f8.user.js`、`youtube-quick-report-shift-f8.user.js`）
+  - 平台專用：`<platform>-<feature>[-<hotkey>].user.js`（例如 `bilibili-assistant.user.js`、`youtube-batch-add-to-playlist-shift-f8.user.js`）
   - 通用腳本：`universal-<feature>[-<hotkey>].user.js`（例如 `universal-url-cleaner.user.js`、`universal-video-block.user.js`）
 - **引用路徑標準**：
   - 專案內部所有配置、文檔、規則與程式碼註解中之檔案引用與路徑標註，**一律使用跨平台相對路徑（以 POSIX 正斜線 `/` 表示）**，嚴格禁止寫入特定本機或作業系統絕對路徑。
