@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         YouTube-批量加入播放清單-Shift-F8
 // @namespace    http://tampermonkey.net/
-// @version      5.0
+// @version      5.1
 // @description  支援 2024 最新 yt-list-item-view-model 結構，純實體按鈕
 // @match        *://*.youtube.com/*
-// @grant        none
+// @match        *://www.youtube.com/*
+// @grant        GM_registerMenuCommand
 // ==/UserScript==
 
 (function () {
@@ -254,11 +255,25 @@
 
     function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-    // 變更為 Shift + F8 啟動
-    window.addEventListener('keydown', function (e) {
-        if (e.shiftKey && e.key === 'F8') {
+    // --- 快捷鍵監聽 (Shift + F8 啟動，使用捕獲階段避開 YouTube 原生按鍵攔截) ---
+    function onKeyDown(e) {
+        if (e.shiftKey && (e.code === 'F8' || e.key === 'F8')) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
             initBatchSave();
         }
-    });
+    }
 
+    window.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('keydown', onKeyDown, true);
+
+    // --- 註冊 Tampermonkey 選單指令 ---
+    if (typeof GM_registerMenuCommand === 'function') {
+        GM_registerMenuCommand("⚡ 批量加入播放清單 (Shift+F8)", () => {
+            initBatchSave();
+        });
+    }
+
+    console.log('[YouTube Batch Playlist] ✅ 腳本已就緒 (v5.1)，快捷鍵: Shift + F8');
 })();

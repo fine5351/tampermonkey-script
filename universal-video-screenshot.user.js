@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Universal-HTML5影片一鍵高畫質原圖截圖-Alt-S
 // @namespace    https://github.com/
-// @version      1.0
+// @version      1.1
 // @description  支援 Bilibili、YouTube 等全網 HTML5 播放器一鍵無損原畫截圖（Alt+S），自動提取原始解析度（如 1080p/4K）、時間戳記命名下載，並自動複製至剪貼簿
 // @author       Antigravity
 // @match        *://*/*
 // @run-at       document-end
-// @grant        none
+// @grant        GM_registerMenuCommand
 // ==/UserScript==
 
 (function () {
@@ -164,17 +164,30 @@
         }
     }
 
-    // --- 鍵盤快速鍵監聽 (Alt + S) ---
-    window.addEventListener('keydown', function (e) {
+    // --- 鍵盤快速鍵監聽 (Alt + S，採用捕獲階段 Capture Phase 避開 YouTube 播放器內部攔截) ---
+    function onKeyDown(e) {
         const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
         if (activeTag === 'input' || activeTag === 'textarea' || document.activeElement?.isContentEditable) {
             return;
         }
 
-        // Alt + S 啟動截圖
-        if (e.altKey && (e.key === 's' || e.key === 'S')) {
+        // Alt + S 啟動截圖 (支援實體鍵 code 與 key，相容微軟注音輸入法模式)
+        if (e.altKey && !e.shiftKey && !e.ctrlKey && (e.code === 'KeyS' || e.key === 's' || e.key === 'S')) {
             e.preventDefault();
+            e.stopPropagation();
             captureVideoFrame();
         }
-    });
+    }
+
+    window.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('keydown', onKeyDown, true);
+
+    // --- 註冊 Tampermonkey 選單指令 ---
+    if (typeof GM_registerMenuCommand === 'function') {
+        GM_registerMenuCommand("📸 HTML5 影片截圖 (Alt+S)", () => {
+            captureVideoFrame();
+        });
+    }
+
+    console.log('[Video Screenshot] ✅ 腳本已就緒 (v1.1)，快捷鍵: Alt + S');
 })();

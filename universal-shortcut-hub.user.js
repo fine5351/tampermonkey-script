@@ -1,12 +1,15 @@
 // ==UserScript==
 // @name         Universal-全域快捷鍵速查與指揮中心-Alt-Shift-Slash
 // @namespace    https://github.com/
-// @version      1.1
-// @description  按 Alt+Shift+/（或 Ctrl+Shift+K）隨時呼叫半透明懸浮面板，即時偵測目前網址並列出已生效的所有 UserScript 快捷鍵與操作指南
+// @version      1.5
+// @description  按 F1、Alt+/、Alt+Shift+/ 或點擊右下角 ⚡ 圖示隨時呼叫半透明懸浮面板，即時偵測目前網址並列出已生效的所有 UserScript 快捷鍵與操作指南
 // @author       Antigravity
 // @match        *://*/*
+// @match        *://*.youtube.com/*
+// @match        *://*.bilibili.com/*
+// @include      *
 // @run-at       document-end
-// @grant        none
+// @grant        GM_registerMenuCommand
 // ==/UserScript==
 
 (function () {
@@ -34,7 +37,7 @@
         },
         {
             category: "YouTube 專用",
-            matches: (h, p) => h.includes('youtube.com') && p.includes('/watch'),
+            matches: (h) => h.includes('youtube.com'),
             items: [
                 { key: "Shift + F8", name: "批量加入播放清單", desc: "彈出自訂面板批次勾選或取消多個播放清單，無需手動等待" },
                 { key: "Shift + F9", name: "錯誤資訊檢舉", desc: "自動點選檢舉、錯誤資訊並填寫官方未公布理由" },
@@ -66,7 +69,9 @@
                 { key: "Alt + S", name: "HTML5 影片無損截圖", desc: "在任何包含 video 的網頁擷取原始影格並複製到剪貼簿（非輸入狀態時）" },
                 { key: "Shift + F9", name: "米哈遊爆料/內鬼檢舉", desc: "呼叫全域彈窗產生發送給米哈遊客服與法務之 Gmail 檢舉信" },
                 { key: "常駐背景", name: "網址去追蹤與外鏈直達", desc: "自動移除 utm_*, fbclid 參數，繞過各平台「即將離開」警告頁" },
-                { key: "常駐背景", name: "解除複製與右鍵限制", desc: "強制開啟 user-select: text，防止網頁反選取與限制選單" }
+                { key: "常駐背景", name: "解除複製與右鍵限制", desc: "強制開啟 user-select: text，防止網頁反選取與限制選單" },
+                { key: "常駐背景", name: "VideoBlock 影片過濾", desc: "自訂關鍵字與頻道過濾屏蔽，支援右下角 🛡️ 圖示或選單設定" },
+                { key: "常駐背景", name: "簡繁自動翻譯與字體調整", desc: "指定網域自動簡轉繁與字體縮放，支援選單開啟設定" }
             ]
         }
     ];
@@ -88,7 +93,7 @@
             height: 100vh;
             background: rgba(15, 23, 42, 0.6);
             backdrop-filter: blur(4px);
-            z-index: 999998;
+            z-index: 2147483647;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -115,78 +120,165 @@
         `;
 
         // 動畫樣式
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes ush-fade-in { from { opacity: 0; } to { opacity: 1; } }
-            .ush-badge-active { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
-            .ush-badge-global { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
-            .ush-key { background: #f8fafc; border: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8; border-radius: 5px; padding: 2px 7px; font-family: monospace; font-size: 12px; font-weight: 700; color: #0f172a; display: inline-block; }
-            .ush-scroll::-webkit-scrollbar { width: 6px; }
-            .ush-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        `;
-        document.head.appendChild(style);
+        let style = document.getElementById('ush-hub-style');
+        if (!style) {
+            style = document.createElement('style');
+            style.id = 'ush-hub-style';
+            style.textContent = `
+                @keyframes ush-fade-in { from { opacity: 0; } to { opacity: 1; } }
+                .ush-badge-active { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+                .ush-badge-global { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+                .ush-key { background: #f8fafc; border: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8; border-radius: 5px; padding: 2px 7px; font-family: monospace; font-size: 12px; font-weight: 700; color: #0f172a; display: inline-block; }
+                .ush-scroll::-webkit-scrollbar { width: 6px; }
+                .ush-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+            `;
+            (document.head || document.documentElement).appendChild(style);
+        }
 
-        // 構建內容 HTML
-        let sectionsHtml = '';
+        // --- 標題列構建 (純 DOM API，完全相容 Trusted Types) ---
+        const header = document.createElement('div');
+        header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;';
+
+        const headerLeft = document.createElement('div');
+        headerLeft.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+
+        const headerIcon = document.createElement('span');
+        headerIcon.style.fontSize = '20px';
+        headerIcon.textContent = '⚡';
+
+        const headerTitleWrap = document.createElement('div');
+        const headerTitle = document.createElement('div');
+        headerTitle.style.cssText = 'font-size: 17px; font-weight: 700; color: #0f172a;';
+        headerTitle.textContent = 'UserScript 快捷鍵指揮中心';
+        const headerSub = document.createElement('div');
+        headerSub.style.cssText = 'font-size: 12px; color: #64748b;';
+        headerSub.textContent = `目前網域: ${host}`;
+        headerTitleWrap.appendChild(headerTitle);
+        headerTitleWrap.appendChild(headerSub);
+
+        headerLeft.appendChild(headerIcon);
+        headerLeft.appendChild(headerTitleWrap);
+
+        const closeBtn = document.createElement('span');
+        closeBtn.id = 'ush-close-btn';
+        closeBtn.style.cssText = 'cursor: pointer; font-size: 24px; color: #94a3b8; line-height: 1; padding: 0 4px;';
+        closeBtn.textContent = '×';
+
+        header.appendChild(headerLeft);
+        header.appendChild(closeBtn);
+        modal.appendChild(header);
+
+        // --- 滾動內容容器 ---
+        const scrollContainer = document.createElement('div');
+        scrollContainer.className = 'ush-scroll';
+        scrollContainer.style.cssText = 'overflow-y: auto; flex: 1; padding-right: 4px;';
+
         SCRIPT_REGISTRY.forEach(group => {
             const isActiveHere = group.matches(host, path);
-            const badgeClass = isActiveHere && group.category !== "全網通用常駐功能" ? "ush-badge-active" : "ush-badge-global";
-            const badgeText = isActiveHere && group.category !== "全網通用常駐功能" ? "🟢 當前頁面已生效" : "通用";
+            const isGlobal = group.category === "全網通用常駐功能";
 
-            let itemsHtml = '';
+            const groupWrap = document.createElement('div');
+            groupWrap.style.marginBottom = '18px';
+
+            const groupHeader = document.createElement('div');
+            groupHeader.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;';
+
+            const catTitle = document.createElement('span');
+            catTitle.style.cssText = 'font-weight: 700; font-size: 14px; color: #334155;';
+            catTitle.textContent = group.category;
+
+            const badge = document.createElement('span');
+            badge.style.cssText = 'font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;';
+            if (isActiveHere && !isGlobal) {
+                badge.className = 'ush-badge-active';
+                badge.textContent = '🟢 當前頁面已生效';
+            } else {
+                badge.className = 'ush-badge-global';
+                badge.textContent = '通用';
+            }
+
+            groupHeader.appendChild(catTitle);
+            groupHeader.appendChild(badge);
+            groupWrap.appendChild(groupHeader);
+
+            const card = document.createElement('div');
+            card.style.cssText = 'background: #f8fafc; border-radius: 8px; padding: 8px 14px; border: 1px solid #e2e8f0;';
+
             group.items.forEach(item => {
-                itemsHtml += `
-                    <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 7px 0; border-bottom: 1px dashed #f1f5f9;">
-                        <div style="flex: 1; padding-right: 12px;">
-                            <span style="font-weight: 600; font-size: 14px; color: #1e293b;">${item.name}</span>
-                            <div style="font-size: 12px; color: #64748b; margin-top: 2px;">${item.desc}</div>
-                        </div>
-                        <span class="ush-key">${item.key}</span>
-                    </div>
-                `;
+                const row = document.createElement('div');
+                row.style.cssText = 'display: flex; align-items: baseline; justify-content: space-between; padding: 7px 0; border-bottom: 1px dashed #f1f5f9;';
+
+                const left = document.createElement('div');
+                left.style.cssText = 'flex: 1; padding-right: 12px;';
+
+                const itemName = document.createElement('span');
+                itemName.style.cssText = 'font-weight: 600; font-size: 14px; color: #1e293b;';
+                itemName.textContent = item.name;
+
+                const itemDesc = document.createElement('div');
+                itemDesc.style.cssText = 'font-size: 12px; color: #64748b; margin-top: 2px;';
+                itemDesc.textContent = item.desc;
+
+                left.appendChild(itemName);
+                left.appendChild(itemDesc);
+
+                const keyBadge = document.createElement('span');
+                keyBadge.className = 'ush-key';
+                keyBadge.textContent = item.key;
+
+                row.appendChild(left);
+                row.appendChild(keyBadge);
+                card.appendChild(row);
             });
 
-            sectionsHtml += `
-                <div style="margin-bottom: 18px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="font-weight: 700; font-size: 14px; color: #334155;">${group.category}</span>
-                        <span class="${badgeClass}" style="font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">${badgeText}</span>
-                    </div>
-                    <div style="background: #f8fafc; border-radius: 8px; padding: 8px 14px; border: 1px solid #e2e8f0;">
-                        ${itemsHtml}
-                    </div>
-                </div>
-            `;
+            groupWrap.appendChild(card);
+            scrollContainer.appendChild(groupWrap);
         });
 
-        modal.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 20px;">⚡</span>
-                    <div>
-                        <div style="font-size: 17px; font-weight: 700; color: #0f172a;">UserScript 快捷鍵指揮中心</div>
-                        <div style="font-size: 12px; color: #64748b;">目前網域: ${host}</div>
-                    </div>
-                </div>
-                <span id="ush-close-btn" style="cursor: pointer; font-size: 22px; color: #94a3b8; line-height: 1;">&times;</span>
-            </div>
+        modal.appendChild(scrollContainer);
 
-            <div class="ush-scroll" style="overflow-y: auto; flex: 1; padding-right: 4px;">
-                ${sectionsHtml}
-            </div>
+        // --- 底部說明列 ---
+        const footer = document.createElement('div');
+        footer.style.cssText = 'margin-top: 14px; padding-top: 10px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #94a3b8;';
 
-            <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #94a3b8;">
-                <span>按 <span class="ush-key">Esc</span> 或點擊外部關閉</span>
-                <span>呼叫本面板：<span class="ush-key">Alt + Shift + /</span></span>
-            </div>
-        `;
+        const footLeft = document.createElement('span');
+        footLeft.textContent = '按 Esc 或點擊外部關閉';
+
+        const footRight = document.createElement('span');
+        footRight.textContent = '呼叫本面板：';
+
+        const footKey1 = document.createElement('span');
+        footKey1.className = 'ush-key';
+        footKey1.textContent = 'Alt + /';
+
+        const footKey2 = document.createElement('span');
+        footKey2.className = 'ush-key';
+        footKey2.textContent = 'F1';
+
+        const footKey3 = document.createElement('span');
+        footKey3.className = 'ush-key';
+        footKey3.textContent = '⚡';
+
+        footRight.appendChild(footKey1);
+        footRight.appendChild(document.createTextNode(' 或 '));
+        footRight.appendChild(footKey2);
+        footRight.appendChild(document.createTextNode(' 或點擊 '));
+        footRight.appendChild(footKey3);
+
+        footer.appendChild(footLeft);
+        footer.appendChild(footRight);
+        modal.appendChild(footer);
 
         overlay.appendChild(modal);
-        document.body.appendChild(overlay);
+        const mountTarget = document.body || document.documentElement;
+        mountTarget.appendChild(overlay);
 
         function close() {
+            window.removeEventListener('keydown', escHandler, true);
+            document.removeEventListener('keydown', escHandler, true);
             overlay.remove();
-            style.remove();
+            const existingStyle = document.getElementById('ush-hub-style');
+            if (existingStyle) existingStyle.remove();
         }
 
         document.getElementById('ush-close-btn').onclick = close;
@@ -195,21 +287,133 @@
         };
 
         const escHandler = (e) => {
-            if (e.key === 'Escape') {
+            if (e.key === 'Escape' || e.code === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
                 close();
-                window.removeEventListener('keydown', escHandler);
             }
         };
-        window.addEventListener('keydown', escHandler);
+        window.addEventListener('keydown', escHandler, true);
+        document.addEventListener('keydown', escHandler, true);
     }
 
-    // --- 鍵盤監聽 ---
-    window.addEventListener('keydown', function (e) {
-        // Alt + Shift + / (即 Alt + ?) 或 Ctrl + Shift + K
-        if ((e.altKey && e.shiftKey && (e.key === '/' || e.key === '?')) ||
-            (e.ctrlKey && e.shiftKey && (e.key === 'k' || e.key === 'K'))) {
+    // --- 快捷鍵判定邏輯 ---
+    function isTriggerKey(e) {
+        // 1. F1 鍵：國際標準說明熱鍵，單鍵直達，無任何輸入法與修飾鍵衝突
+        if (e.code === 'F1' || e.key === 'F1') {
+            return true;
+        }
+
+        const isSlash = e.code === 'Slash' || e.code === 'NumpadDivide' || e.key === '/' || e.key === '?';
+
+        // 2. Alt + / (單修飾鍵，徹底避開 Windows 系統預設 Alt+Shift 語言切換衝突，單手即可秒開)
+        if (e.altKey && !e.shiftKey && !e.ctrlKey && isSlash) {
+            return true;
+        }
+
+        // 3. 原生 Alt + Shift + / (相容 e.code 與 e.key)
+        if (e.altKey && e.shiftKey && isSlash) {
+            return true;
+        }
+
+        // 4. 備用: Ctrl + Shift + K 或 Ctrl + Shift + /
+        const isK = e.code === 'KeyK' || e.key === 'k' || e.key === 'K';
+        if (e.ctrlKey && e.shiftKey && (isK || isSlash)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    function onKeyDown(e) {
+        if (isTriggerKey(e)) {
             e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            console.log('[ShortcutHub] ⚡ 快捷鍵觸發成功，開啟指揮中心面板');
             showPalette();
         }
-    });
+    }
+
+    // --- 鍵盤事件監聽（捕獲階段 Capture Phase） ---
+    // 使用 capture: true 確保在 YouTube、Bilibili 等 SPA 宿主網頁的原生按鍵監聽或 stopPropagation 之前最優先攔截
+    window.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('keydown', onKeyDown, true);
+
+    // --- 建立右下角懸浮觸發按鈕 (只在頂層視窗建立) ---
+    function initFloatingTrigger() {
+        if (window.self !== window.top) return; // 避免在子 iframe 中重複建立
+        if (document.getElementById('ush-hub-floating-btn')) return;
+
+        const btn = document.createElement('div');
+        btn.id = 'ush-hub-floating-btn';
+        btn.title = 'UserScript 快捷鍵指揮中心 (點擊或按 Alt+/、F1 開啟)';
+        btn.textContent = '⚡';
+        btn.style.cssText = `
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 2147483640;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+            user-select: none;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            opacity: 0.85;
+        `;
+
+        btn.onmouseenter = () => {
+            btn.style.opacity = '1';
+            btn.style.transform = 'scale(1.1)';
+            btn.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.4)';
+        };
+        btn.onmouseleave = () => {
+            btn.style.opacity = '0.85';
+            btn.style.transform = 'scale(1)';
+            btn.style.boxShadow = '0 4px 14px rgba(0, 0, 0, 0.3)';
+        };
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            showPalette();
+        };
+
+        const target = document.body || document.documentElement;
+        if (target) {
+            target.appendChild(btn);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initFloatingTrigger);
+    } else {
+        initFloatingTrigger();
+    }
+
+    // YouTube SPA 定期補掛檢查
+    let checkCount = 0;
+    const btnCheckInterval = setInterval(() => {
+        initFloatingTrigger();
+        if (++checkCount > 10) clearInterval(btnCheckInterval);
+    }, 1000);
+
+    // --- 註冊 Tampermonkey 選單指令 ---
+    if (typeof GM_registerMenuCommand === 'function') {
+        GM_registerMenuCommand("⚡ 開啟快捷鍵指揮中心 (Alt+/ 或 F1)", () => {
+            showPalette();
+        });
+    }
+
+    console.log('[ShortcutHub] ✅ 全域快捷鍵速查與指揮中心 (v1.3) 已就緒。支援方式: F1 / Alt+/ / 右下角 ⚡ 按鈕 / Tampermonkey 選單');
 })();

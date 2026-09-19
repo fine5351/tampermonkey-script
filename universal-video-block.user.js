@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Universal-VideoBlock影片過濾助手
 // @namespace    https://github.com/
-// @version      1.1
+// @version      1.2
 // @description  全站過濾並屏蔽 unwanted 影片，支援自訂關鍵字、UP主/頻道、時長過濾、廣告淨化與自訂網站規則
 // @author       Antigravity
 // @match        *://*/*
@@ -15,6 +15,35 @@
 
 (function () {
     'use strict';
+
+    // --- Trusted Types 策略支援 (相容 YouTube 等 CSP 嚴格網站) ---
+    let htmlPolicy = null;
+    if (window.trustedTypes && window.trustedTypes.createPolicy) {
+        try {
+            htmlPolicy = window.trustedTypes.createPolicy('videoBlockPolicy', {
+                createHTML: (s) => s
+            });
+        } catch (e) {
+            htmlPolicy = (window.trustedTypes.getPolicy && window.trustedTypes.getPolicy('videoBlockPolicy')) || { createHTML: (s) => s };
+        }
+    }
+
+    function setSafeHTML(elem, html) {
+        if (htmlPolicy) {
+            elem.innerHTML = htmlPolicy.createHTML(html);
+        } else {
+            try {
+                elem.innerHTML = html;
+            } catch (e) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                elem.textContent = '';
+                while (doc.body.firstChild) {
+                    elem.appendChild(doc.body.firstChild);
+                }
+            }
+        }
+    }
 
     // Bilibili Category/TID mapping
     const BILIBILI_TID_MAP = {
@@ -623,7 +652,7 @@
                 customRules: JSON.stringify(GM_getValue('custom_rules', []), null, 2)
             };
 
-            this.overlay.innerHTML = `
+            setSafeHTML(this.overlay, `
                 <div class="yb-modal-card">
                     <div class="yb-modal-header">
                         <div class="yb-modal-title">VideoBlock 影片過濾設定</div>
@@ -699,7 +728,7 @@
                         <button class="yb-btn yb-btn-primary" id="yb-btn-save">儲存設定</button>
                     </div>
                 </div>
-            `;
+            `);
 
             document.body.appendChild(this.overlay);
 
@@ -800,7 +829,7 @@
         const btn = document.createElement('div');
         btn.className = 'yb-float-btn';
         btn.title = 'VideoBlock 設定';
-        btn.innerHTML = '🛡️';
+        btn.textContent = '🛡️';
         btn.addEventListener('click', () => {
             SettingsModal.show(onSaveCallback);
         });

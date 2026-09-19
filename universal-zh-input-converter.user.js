@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Universal-繁簡輸入轉換器-Alt-S
 // @namespace    https://github.com/fine5351/
-// @version      1.0
+// @version      1.1
 // @description  在任何網頁打字時將繁體中文快速轉為簡體輸入：支援輸入框原地快捷鍵（Alt+S）轉換、反白文字快捷轉換複製，以及隨身浮動小視窗（Alt+Shift+S，支援純字形/詞彙轉換即打即轉與一鍵複製）
 // @author       fine5351
 // @match        *://*/*
@@ -15,6 +15,35 @@
 
 (function () {
     'use strict';
+
+    // --- Trusted Types 策略支援 (相容 YouTube 等 CSP 嚴格網站) ---
+    let htmlPolicy = null;
+    if (window.trustedTypes && window.trustedTypes.createPolicy) {
+        try {
+            htmlPolicy = window.trustedTypes.createPolicy('uzInputConverterPolicy', {
+                createHTML: (s) => s
+            });
+        } catch (e) {
+            htmlPolicy = (window.trustedTypes.getPolicy && window.trustedTypes.getPolicy('uzInputConverterPolicy')) || { createHTML: (s) => s };
+        }
+    }
+
+    function setSafeHTML(elem, html) {
+        if (htmlPolicy) {
+            elem.innerHTML = htmlPolicy.createHTML(html);
+        } else {
+            try {
+                elem.innerHTML = html;
+            } catch (e) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                elem.textContent = '';
+                while (doc.body.firstChild) {
+                    elem.appendChild(doc.body.firstChild);
+                }
+            }
+        }
+    }
 
     // =========================================================================
     // 1. 設定與狀態管理
@@ -133,7 +162,14 @@
         if (type === 'warn') icon = '⚠️';
         if (type === 'clipboard') icon = '📋';
 
-        toastDiv.innerHTML = `<span class="uz-toast-icon">${icon}</span><span>${message}</span>`;
+        toastDiv.textContent = '';
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'uz-toast-icon';
+        iconSpan.textContent = icon;
+        const msgSpan = document.createElement('span');
+        msgSpan.textContent = message;
+        toastDiv.appendChild(iconSpan);
+        toastDiv.appendChild(msgSpan);
         toastDiv.classList.add('show');
 
         if (toastTimeout) clearTimeout(toastTimeout);
@@ -565,7 +601,7 @@
 
         const overlay = document.createElement('div');
         overlay.id = 'uz-modal-overlay';
-        overlay.innerHTML = `
+        setSafeHTML(overlay, `
             <div id="uz-modal-card">
                 <div id="uz-modal-header">
                     <div class="header-title-wrap">
@@ -608,7 +644,7 @@
                     </button>
                 </div>
             </div>
-        `;
+        `);
         modalShadow.appendChild(overlay);
         (document.body || document.documentElement).appendChild(modalContainer);
 

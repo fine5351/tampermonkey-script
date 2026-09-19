@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Universal-米哈遊未公布資訊/內鬼影片檢舉套件-Shift-F9
 // @namespace    http://tampermonkey.net/
-// @version      2.0
+// @version      2.1
 // @description  跨平台米哈遊爆料/內鬼檢舉整合工具（Shift+F9）：支援 Bilibili/YouTube 站內自動檢舉流程，以及全站通用法務與客服檢舉信生成 (Gmail)
 // @author       Antigravity
 // @match        *://*/*
 // @run-at       document-end
-// @grant        none
+// @grant        GM_registerMenuCommand
 // ==/UserScript==
 
 (function () {
@@ -20,7 +20,24 @@
                 createHTML: (s) => s
             });
         } catch (e) {
-            htmlPolicy = window.trustedTypes.getPolicy('leakerReportSuite') || { createHTML: (s) => s };
+            htmlPolicy = (window.trustedTypes.getPolicy && window.trustedTypes.getPolicy('leakerReportSuite')) || { createHTML: (s) => s };
+        }
+    }
+
+    function setSafeHTML(elem, html) {
+        if (htmlPolicy) {
+            elem.innerHTML = htmlPolicy.createHTML(html);
+        } else {
+            try {
+                elem.innerHTML = html;
+            } catch (e) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                elem.textContent = '';
+                while (doc.body.firstChild) {
+                    elem.appendChild(doc.body.firstChild);
+                }
+            }
         }
     }
 
@@ -282,11 +299,7 @@
             </div>
         `;
 
-        if (htmlPolicy) {
-            modal.innerHTML = htmlPolicy.createHTML(modalInner);
-        } else {
-            modal.innerHTML = modalInner;
-        }
+        setSafeHTML(modal, modalInner);
 
         document.body.appendChild(overlay);
         document.body.appendChild(modal);
@@ -355,12 +368,25 @@
     }
 
     // ==========================================
-    // 4. 快捷鍵監聽 (Shift + F9 全域觸發)
+    // 4. 快捷鍵監聽 (Shift + F9 全域觸發，採用捕獲階段 Capture Phase 避開 YouTube 攔截)
     // ==========================================
-    window.addEventListener('keydown', function (e) {
-        if (e.shiftKey && e.key === 'F9') {
+    function onKeyDown(e) {
+        if (e.shiftKey && (e.code === 'F9' || e.key === 'F9')) {
             e.preventDefault();
+            e.stopPropagation();
             showReportModal();
         }
-    });
+    }
+
+    window.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('keydown', onKeyDown, true);
+
+    // --- 註冊 Tampermonkey 選單指令 ---
+    if (typeof GM_registerMenuCommand === 'function') {
+        GM_registerMenuCommand("🛡️ 米哈遊爆料/內鬼檢舉 (Shift+F9)", () => {
+            showReportModal();
+        });
+    }
+
+    console.log('[Leaker Report Suite] ✅ 腳本已就緒 (v2.1)，快捷鍵: Shift + F9');
 })();

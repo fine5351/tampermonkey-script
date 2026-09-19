@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Universal-簡繁自動翻譯與網域管理
 // @namespace    https://github.com/fine5351/
-// @version      1.2
+// @version      1.3
 // @description  在指定網域自動將簡體中文翻譯為繁體中文（台灣），支援動態載入內容、網域匯入/匯出，以及每個網域獨立的字體大小調整
 // @author       Antigravity
 // @match        *://*/*
@@ -14,6 +14,35 @@
 
 (function () {
     'use strict';
+
+    // --- Trusted Types 策略支援 (相容 YouTube 等 CSP 嚴格網站) ---
+    let htmlPolicy = null;
+    if (window.trustedTypes && window.trustedTypes.createPolicy) {
+        try {
+            htmlPolicy = window.trustedTypes.createPolicy('uzTranslationPolicy', {
+                createHTML: (s) => s
+            });
+        } catch (e) {
+            htmlPolicy = (window.trustedTypes.getPolicy && window.trustedTypes.getPolicy('uzTranslationPolicy')) || { createHTML: (s) => s };
+        }
+    }
+
+    function setSafeHTML(elem, html) {
+        if (htmlPolicy) {
+            elem.innerHTML = htmlPolicy.createHTML(html);
+        } else {
+            try {
+                elem.innerHTML = html;
+            } catch (e) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                elem.textContent = '';
+                while (doc.body.firstChild) {
+                    elem.appendChild(doc.body.firstChild);
+                }
+            }
+        }
+    }
 
     const currentHost = location.hostname.toLowerCase();
     let domains = GM_getValue('translated_domains', []);
@@ -427,7 +456,7 @@
 
         const overlay = document.createElement('div');
         overlay.id = 'uzt-font-overlay';
-        overlay.innerHTML =
+        setSafeHTML(overlay,
             '<div id="uzt-font-modal">' +
                 '<div id="uzt-font-header">' +
                     '<h3>\uD83D\uDD24 字體大小調整</h3>' +
@@ -447,7 +476,7 @@
                     '<button class="uzt-fb uzt-fb-secondary" id="uzt-font-cancel">取消</button>' +
                     '<button class="uzt-fb uzt-fb-primary" id="uzt-font-save">\uD83D\uDCBE 儲存</button>' +
                 '</div>' +
-            '</div>';
+            '</div>');
         shadow.appendChild(overlay);
         document.body.appendChild(container);
         // 抵銷頁面 zoom 對 Modal 的影響
@@ -460,7 +489,10 @@
             tempSize = Math.min(MAX, Math.max(MIN, v));
             slider.value = tempSize;
             slider.style.setProperty('--pct', pct(tempSize) + '%');
-            display.innerHTML = tempSize + '<span>%</span>';
+            display.textContent = tempSize;
+            const pctSpan = document.createElement('span');
+            pctSpan.textContent = '%';
+            display.appendChild(pctSpan);
             _applyFontSizeStyle(tempSize);
         }
 
@@ -777,7 +809,7 @@
         // 插入 HTML 結構
         const overlay = document.createElement('div');
         overlay.id = 'uzt-settings-overlay';
-        overlay.innerHTML = `
+        setSafeHTML(overlay, `
             <div id="uzt-settings-modal">
                 <div id="uzt-settings-header">
                     <h3>⚙️ 繁簡翻譯設定</h3>
@@ -830,7 +862,7 @@
                     <button class="uzt-btn uzt-btn-primary" id="uzt-save-btn">儲存並重整</button>
                 </div>
             </div>
-        `;
+        `);
         shadow.appendChild(overlay);
         document.body.appendChild(container);
         // 抵銷頁面 zoom 對 Modal 的影響
@@ -860,9 +892,12 @@
         // 渲染網域列表
         function renderDomains() {
             const listDiv = shadow.getElementById('uzt-domain-list');
-            listDiv.innerHTML = '';
+            listDiv.textContent = '';
             if (localDomains.length === 0) {
-                listDiv.innerHTML = '<div style="text-align:center;color:#888;padding:20px;font-size:13px;">目前沒有設定任何網域</div>';
+                const emptyDiv = document.createElement('div');
+                emptyDiv.style.cssText = 'text-align:center;color:#888;padding:20px;font-size:13px;';
+                emptyDiv.textContent = '目前沒有設定任何網域';
+                listDiv.appendChild(emptyDiv);
             } else {
                 localDomains.forEach(function (domain, idx) {
                     const item = document.createElement('div');
@@ -874,12 +909,9 @@
 
                     const delBtn = document.createElement('button');
                     delBtn.className = 'uzt-delete-btn';
-                    delBtn.innerHTML = `
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                    `;
+                    delBtn.title = '刪除網域';
+                    delBtn.textContent = '🗑️';
+                    delBtn.style.fontSize = '13px';
                     delBtn.onclick = function () {
                         localDomains.splice(idx, 1);
                         renderDomains();
