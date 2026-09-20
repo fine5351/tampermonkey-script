@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Universal-全域快捷鍵速查與指揮中心-Alt-Shift-Slash
 // @namespace    https://github.com/
-// @version      1.6
+// @version      1.7
 // @description  按 F1、Alt+/、Alt+Shift+/ 或點擊右下角 ⚡ 圖示隨時呼叫半透明懸浮面板，即時偵測目前網址並列出已生效的所有 UserScript 快捷鍵與操作指南
 // @author       Antigravity
 // @match        *://*/*
@@ -23,7 +23,7 @@
             category: "Threads 專用",
             matches: (h) => h.includes('threads.net') || h.includes('threads.com'),
             items: [
-                { key: "Alt + B", name: "筆戰戰情室", desc: "呼叫 AI 言詞交鋒助手，以米哈遊辯論哲學解構邏輯漏洞並產生 3 大回擊選項" },
+                { key: "Alt + B", name: "筆戰戰情室", desc: "呼叫 AI 言詞交鋒助手，以直接犀利的冷嘲熱諷解構邏輯漏洞並產生 3 大回擊選項" },
                 { key: "常駐按鈕", name: "⚔️ 反駁此留言", desc: "在每則串文卡片一鍵帶入目標言論至戰情室並提取串文脈絡" }
             ]
         },
@@ -42,8 +42,7 @@
             matches: (h) => h.includes('live.bilibili.com'),
             items: [
                 { key: "F8", name: "自動點讚開關", desc: "每 5 秒定時點擊直播間點讚按鈕（按一次開啟，再按一次停止）" },
-                { key: "F9", name: "自動彈幕開關", desc: "設定彈幕內容與間隔秒數定時循環發送（再次按下 F9 停止）" },
-                { key: "Alt + S", name: "直播原圖截圖", desc: "擷取當前直播畫面無損 PNG" }
+                { key: "F9", name: "自動彈幕開關", desc: "設定彈幕內容與間隔秒數定時循環發送（再次按下 F9 停止）" }
             ]
         },
         {
@@ -51,8 +50,7 @@
             matches: (h) => h.includes('youtube.com'),
             items: [
                 { key: "Shift + F8", name: "批量加入播放清單", desc: "彈出自訂面板批次勾選或取消多個播放清單，無需手動等待" },
-                { key: "Shift + F9", name: "錯誤資訊檢舉", desc: "自動點選檢舉、錯誤資訊並填寫官方未公布理由" },
-                { key: "Alt + S", name: "影片原圖截圖", desc: "擷取 YouTube 當前影格原始解析度無損 PNG 並命名下載" }
+                { key: "Shift + F9", name: "錯誤資訊檢舉", desc: "自動點選檢舉、錯誤資訊並填寫官方未公布理由" }
             ]
         },
         {
@@ -77,11 +75,10 @@
             category: "全網通用常駐功能",
             matches: () => true,
             items: [
-                { key: "Alt + S", name: "HTML5 影片無損截圖", desc: "在任何包含 video 的網頁擷取原始影格並複製到剪貼簿（非輸入狀態時）" },
                 { key: "Shift + F9", name: "米哈遊爆料/內鬼檢舉", desc: "呼叫全域彈窗產生發送給米哈遊客服與法務之 Gmail 檢舉信" },
                 { key: "常駐背景", name: "網址去追蹤與外鏈直達", desc: "自動移除 utm_*, fbclid 參數，繞過各平台「即將離開」警告頁" },
                 { key: "常駐背景", name: "解除複製與右鍵限制", desc: "強制開啟 user-select: text，防止網頁反選取與限制選單" },
-                { key: "Alt + B", name: "全網 AI 筆戰戰情室", desc: "融合米哈遊辯論哲學，劃詞反駁或解構全網任何言論並產出 3 大回擊選項" },
+                { key: "Alt + B", name: "全網 AI 筆戰戰情室", desc: "專注直接清晰的冷嘲熱諷與邏輯解構，劃詞反駁並產出 3 大回擊選項" },
                 { key: "滑鼠劃詞", name: "⚔️ 劃詞反駁徽章", desc: "反白選取網頁任何文字即浮現戰鬥徽章，一鍵發動邏輯回擊" },
                 { key: "常駐背景", name: "VideoBlock 影片過濾", desc: "自訂關鍵字與頻道過濾屏蔽，支援右下角 🛡️ 圖示或選單設定" },
                 { key: "常駐背景", name: "簡繁自動翻譯與字體調整", desc: "指定網域自動簡轉繁與字體縮放，支援選單開啟設定" }

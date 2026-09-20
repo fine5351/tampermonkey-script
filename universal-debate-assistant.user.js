@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Universal-全網AI筆戰吵架助手-Alt-B
 // @namespace    https://github.com/
-// @version      2.0
-// @description  全網泛用型 AI 言詞交鋒助手（支援 Threads、Bilibili、YouTube 及全網任意網頁）。融合米哈遊辯論哲學，提供模組化平台適配器（Adapter）、全網劃詞一鍵反駁、邏輯漏洞解構與 3~4 句極致回擊，支援一鍵填入回覆。
+// @version      2.7
+// @description  全網泛用型 AI 言詞交鋒助手（支援 Threads、Bilibili、YouTube 及全網任意網頁）。專注直接清晰的冷嘲熱諷與邏輯解構、B站主樓/樓中樓垂直爬樓追溯、自動排除我方發言按鈕、深層穿透 Shadow DOM、Gemini 3.8-flash 旗艦驅動、4096 Tokens 防截斷、支援一鍵填入回覆。
 // @author       Antigravity
 // @match        *://*/*
 // @run-at       document-end
@@ -22,40 +22,150 @@
     const STORAGE_KEY_MY_HANDLE = 'uda_my_handle';
     const STORAGE_KEY_CUSTOM_STANCE = 'uda_custom_stance';
 
-    const DEFAULT_MODEL = 'gemini-2.5-flash';
+    const DEFAULT_MODEL = 'gemini-3.8-flash';
+    const FALLBACK_MODELS = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-3.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
     const DEFAULT_MY_HANDLE = 'fine1101105351';
 
-    // --- 內建米哈遊言詞交鋒核心系統提示詞 (Mihoyo Debater Philosophy) ---
-    const SYSTEM_PROMPT = `你是一位頂尖的社群言論交鋒專家與邏輯謬誤解構大師（精通米哈遊旗下遊戲底層機制與社群生態）。
-你的任務是針對目標言論的邏輯漏洞進行無情拆解與致命打擊。
+    // --- AI 筆戰交鋒系統提示詞 (犀利冷嘲熱諷與邏輯解構) ---
+    const SYSTEM_PROMPT = `你是一位頂尖的社群辯論交鋒專家與邏輯解構大師。
+你的專長是精準抓住對手言論中的邏輯破綻、自相矛盾與情緒破防，運用直接、清晰且極具殺傷力的冷嘲熱諷進行精確打擊。
 
-## 核心人設與原則（Strict Invariants）
-1. 善良本質與禁止人身攻擊：所有回擊必須且只能針對「對方的言論邏輯漏洞、認知盲點與雙標行為」進行精準打擊。嚴格禁止針對家世、長相、智商或現實人格進行無關人身攻擊。
-2. 字數極限控制（鐵律）：每個回擊選項嚴格控制在 3 到 4 句以內！刀刀見血、節奏短促、穿透力強，杜絕長篇大論與冗長說教。
-3. 精湛修辭手法：偏好「正話反說 (Irony)」、「反問 (Rhetorical Question)」與「以彼之矛攻彼之盾」，以冷靜、高姿態的審查者角度戳破對方的自我感動、雙標與扣帽子行為。
-4. 機制隱喻精確性：
-   - 「大保底」：諷刺指望他人或系統無條件兜底、自身無能卻要保障、脆弱逃避的心態。
-   - 「詞條歪了」：諷刺抓不到核心重點、邏輯跑偏、腦迴路清奇、產出大量無用廢話。
-   - 「破韌/對策卡/機制」：諷刺無視基本規則、逆環境硬刮卻反過來怪遊戲或怪環境。
-   - 「零命無專武/聖遺物湊合」：諷刺自己把弱點佔齊卻反咬外部環境的卸責行為。
-5. 金錢反擊門禁（Critical）：只有在對方主動提及「流水、課金、花錢、商業表現、氪佬、炫耀」等金錢議題時，才允許啟用身份落差與經濟維度降維打擊（如質疑對方身份資格：「你操心氪佬能不能炫耀幹嘛？你大概也不是那個氪佬吧」）。對方未提金錢時，嚴禁主動使用金錢辱罵。
-6. 嚴防代表大眾謬誤：自身嚴禁使用「大家都...」、「我們一般玩家...」等試圖代表群體的詞語，必須始終保持獨立審判者姿態。
-7. 「三無」定性與高姿態勸退：在揭穿對方精神勝利後，可使用「沒錢、沒腦、沒手」排比大白話直拳，並以「勸你趁早別玩了」或「勸你別浪費時間了」高姿態宣判終結對話。
-8. 語言：一律使用繁體中文（台灣）。
+## 核心人設與回擊原則（Strict Invariants）
+1. 直接清晰的冷嘲熱諷：
+   - 拋棄一切晦澀的比喻與特定領域/遊戲術語。
+   - 用最純粹、銳利且通俗的大白話，直接拆穿對方的「邏輯破綻」、「雙重標準」、「惱羞成怒」、「道德綁架」與「試圖代表群體抱團取暖」。
+2. 善良本質與邏輯打擊：所有火力必須且只能針對「對方的言論盲點、邏輯破綻與認知漏洞」。嚴格禁止針對家世、長相、智商或現實人格發動無關人身攻擊。
+3. 嚴格字數限制（鐵律）：每個回擊選項嚴格控制在 3 到 4 句以內！節奏短促、一針見血、刀刀見肉，杜絕冗長說教與廢話。
+4. 核心修辭武器：
+   - 【反問直刺】：用連續銳利的反問，逼對方直視自身的荒謬與前後矛盾。
+   - 【正話反說 (Irony)】：看似順著對方的荒謬邏輯推演，實則將其推向極致可笑的境地。
+   - 【以彼之矛攻彼之盾】：直接拿對方自己講過的話或預設立場反打回去，讓對方自打嘴巴。
+   - 【戳破偽裝】：直接撕破對方「假裝客觀講理，實則無能狂怒/嫉妒破防」的遮羞布。
+5. 嚴防代表大眾：自身嚴禁使用「大家都...」、「我們一般人...」等試圖拉群體墊背的詞語，必須始終保持冷靜、高姿態的獨立審判者姿態。
+6. 高姿態終結：在徹底拆穿對手無能扣帽子或精神勝利後，可用節奏明快的大白話俐落收尾（如「反駁不了事實就只能急著抓態度，除了跳腳你還剩下什麼？」、「勸你別自討沒趣了」）。
+7. 語言：一律使用繁體中文（台灣）。
 
-## 輸出結構規範（必須包含以下格式）
+## 輸出結構規範（必須嚴格遵守以下格式）
 【對手邏輯漏洞剖析】
-- 列出 1~2 點對手最致命的邏輯謬誤（如：稻草人謬誤、轉移焦點/偷換概念、代表大眾、自相矛盾、訴諸道德等）。
+- 列出 1~2 點對手最致命的邏輯謬誤（如：轉移焦點、稻草人打靶、雙重標準、代表大眾、自相矛盾等）。
 
 【回擊選項】
-### 選項 A（反問 + 邏輯拆解：切入點簡述）
-> 「（3~4 句極致精煉的致命回擊）」
+### 選項 A（反問直擊・邏輯拆解：切入點簡述）
+> 「（3~4 句極致精煉、直接清晰的致命反駁）」
 
-### 選項 B（正話反說 / 以彼之矛攻彼之盾：切入點簡述）
-> 「（3~4 句極致精煉的致命回擊）」
+### 選項 B（正話反說・降維嘲諷：切入點簡述）
+> 「（3~4 句極致精煉、直接清晰的致命反駁）」
 
-### 選項 C（高姿態審判 / 大白話直拳勸退：切入點簡述）
-> 「（3~4 句極致精煉的致命回擊）」`;
+### 選項 C（直白戳破・高姿態審判：切入點簡述）
+> 「（3~4 句極致精煉、直接清晰的致命反駁）」`;
+
+    // ==========================================
+    // 通用 Shadow DOM 穿透與邊界向上溯源器 (相容 Web Components 架構)
+    // ==========================================
+    function queryDeep(selector, root = document) {
+        const results = [];
+        const visited = new Set();
+
+        function walk(node) {
+            if (!node || visited.has(node)) return;
+            visited.add(node);
+
+            if (node.querySelectorAll) {
+                try {
+                    const matched = node.querySelectorAll(selector);
+                    for (let i = 0; i < matched.length; i++) {
+                        results.push(matched[i]);
+                    }
+                } catch (e) {}
+
+                // 遞迴穿透所有子節點之 shadowRoot
+                const all = node.querySelectorAll('*');
+                for (let i = 0; i < all.length; i++) {
+                    const el = all[i];
+                    if (el.shadowRoot) {
+                        walk(el.shadowRoot);
+                    }
+                }
+            }
+        }
+
+        walk(root);
+        return results;
+    }
+
+    function findComposedParent(el, selector) {
+        let curr = el;
+        while (curr) {
+            if (curr.matches && curr.matches(selector)) return curr;
+            if (curr.parentElement) {
+                curr = curr.parentElement;
+            } else if (curr.parentNode) {
+                curr = curr.parentNode;
+            } else if (curr.host) { // 穿透 shadowRoot 邊界回到宿主元件
+                curr = curr.host;
+            } else {
+                break;
+            }
+        }
+    }
+
+    // 判斷某篇發言是否屬於「我」自己的發言（避免在自己的言論下出現反駁/筆戰按鈕）
+    function isSelfPost(authorName, containerEl) {
+        const configuredHandle = (GM_getValue(STORAGE_KEY_MY_HANDLE, DEFAULT_MY_HANDLE) || '').trim().toLowerCase();
+        const author = (authorName || '').trim().toLowerCase();
+
+        // 1. 與設定之「我的帳號名稱 (Handle)」比對
+        if (configuredHandle && author) {
+            const cleanAuthor = author.replace(/^@/, '');
+            const cleanConfigured = configuredHandle.replace(/^@/, '');
+            if (cleanAuthor === cleanConfigured || cleanAuthor.includes(cleanConfigured) || cleanConfigured.includes(cleanAuthor)) {
+                return true;
+            }
+        }
+
+        // 2. 元素特徵探測：在各大社群（特別是 B 站）中，只有自己發布的發言才有「刪除」操作按鈕
+        if (containerEl) {
+            const actionElements = queryDeep('button, a, span, div[role="button"], bili-comment-action-buttons-renderer', containerEl);
+            for (let i = 0; i < actionElements.length; i++) {
+                const el = actionElements[i];
+                const text = (el.textContent || '').trim();
+                // 排除「已删除」純狀態字樣
+                if ((text === '删除' || text === '刪除' || text.toLowerCase() === 'delete') && !text.includes('已')) {
+                    return true;
+                }
+                const label = (el.getAttribute('aria-label') || el.getAttribute('title') || '').toLowerCase();
+                if ((label.includes('删除') || label.includes('刪除') || label.includes('delete')) && !label.includes('已')) {
+                    return true;
+                }
+                const cls = (el.className || '').toString().toLowerCase();
+                if (cls.includes('delete') || cls.includes('del-btn') || cls.includes('reply-delete')) {
+                    return true;
+                }
+            }
+
+            // 檢查 class 或屬性 (如 data-is-me)
+            if (containerEl.classList) {
+                const cls = containerEl.className.toString().toLowerCase();
+                if (cls.includes('is-me') || cls.includes('my-comment') || cls.includes('my-reply')) {
+                    return true;
+                }
+            }
+            if (containerEl.hasAttribute && (containerEl.hasAttribute('is-me') || containerEl.hasAttribute('data-is-me'))) {
+                return true;
+            }
+        }
+
+        // 3. 平台原生當前登入者探測
+        if (location.hostname.includes('bilibili.com')) {
+            const myBiliAvatar = document.querySelector('.header-entry-avatar, .header-avatar-wrap, .bili-avatar, .mini-avatar');
+            const myBiliName = (myBiliAvatar?.getAttribute('alt') || myBiliAvatar?.getAttribute('title') || '').trim().toLowerCase();
+            if (myBiliName && author && (author === myBiliName || author.includes(myBiliName))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     // ==========================================
     // 模組化平台適配器架構 (Platform Adapters)
@@ -101,6 +211,20 @@
             injectButtons: (onSelectTarget) => {
                 const articles = document.querySelectorAll('div[data-pressable-container="true"], article, div[role="article"]');
                 articles.forEach(art => {
+                    const userLink = art.querySelector('a[href*="/@"]');
+                    let handle = '';
+                    if (userLink) {
+                        const href = userLink.getAttribute('href') || '';
+                        const m = href.match(/@([a-zA-Z0-9._]+)/);
+                        handle = m ? m[1] : userLink.textContent.trim().replace(/^@/, '');
+                    }
+
+                    // 若屬於我方發言，移除已有按鈕並跳過
+                    if (isSelfPost(handle, art)) {
+                        art.querySelectorAll('.uda-inline-btn').forEach(b => b.remove());
+                        return;
+                    }
+
                     if (art.querySelector('.uda-inline-btn')) return;
                     const textContainers = art.querySelectorAll('div[dir="auto"], span[dir="auto"]');
                     let postText = '';
@@ -149,53 +273,191 @@
             }
         },
 
-        // 2. Bilibili 適配器 (B站視頻、動態、評論區)
+        // 2. Bilibili 適配器 (B站視頻、動態、評論區 - 全面穿透 Web Components / Shadow DOM)
         {
             id: 'bilibili',
             name: 'Bilibili',
             matches: () => location.hostname.includes('bilibili.com'),
             getPageContext: () => {
-                const title = document.querySelector('h1.video-title, .video-info-title, .opus-module-title')?.textContent?.trim() || document.title;
-                const up = document.querySelector('.up-name, .username')?.textContent?.trim() || '';
+                const title = document.querySelector('h1.video-title, .video-info-title, .opus-module-title, .title')?.textContent?.trim() || document.title;
+                const up = document.querySelector('.up-name, .username, .up-info--name')?.textContent?.trim() || '';
                 return `Bilibili 稿件：${title}${up ? ` (UP主: ${up})` : ''}`;
+            },
+            // 向上追溯特定評論所屬的主樓與樓中樓完整對話鏈 (支援深層穿透 Shadow DOM)
+            traceThread: (targetEl) => {
+                // 向上穿透 ShadowRoot host 邊界尋找當前樓層頂部容器
+                const threadRoot = findComposedParent(targetEl, 'bili-comment-thread-renderer, .reply-item, .comment-thread-item')
+                    || findComposedParent(targetEl, 'bili-comment-renderer, bili-comment-reply-renderer, .root-reply-container, .sub-reply-item')
+                    || targetEl.parentElement;
+                if (!threadRoot) return null;
+
+                const posts = [];
+
+                // 輔助擷取使用者與內文
+                const extractUserInfo = (el) => {
+                    if (!el) return '用戶';
+                    const userEl = queryDeep('bili-comment-user-info, .user-name, .sub-user-name, .reply-user, .name', el)[0] || el;
+                    return userEl?.textContent?.trim().replace(/\s+/g, ' ') || '用戶';
+                };
+                const extractContent = (el) => {
+                    if (!el) return '';
+                    const textEl = queryDeep('bili-rich-text, .reply-content, .text-con, .text, #contents', el)[0] || el;
+                    return (textEl?.innerText || textEl?.textContent || '').trim();
+                };
+
+                // 1. 取得頂樓（主評論）
+                const rootCommentEl = queryDeep('bili-comment-renderer#comment, bili-comment-renderer, .root-reply-container, .reply-wrap', threadRoot)[0] || threadRoot;
+                const rootUser = extractUserInfo(rootCommentEl);
+                const rootText = extractContent(rootCommentEl);
+
+                if (rootText) {
+                    const isTarget = rootCommentEl.contains(targetEl) || targetEl.contains(rootCommentEl);
+                    posts.push({
+                        handle: `${rootUser} (頂樓主評${isTarget ? ' - 反擊目標' : ''})`,
+                        content: rootText
+                    });
+                }
+
+                // 2. 遍歷該主樓下的所有二級樓中樓回覆
+                const subReplies = queryDeep('bili-comment-reply-renderer, .sub-reply-item, .reply-item-sub', threadRoot);
+                subReplies.forEach((sub, idx) => {
+                    const subUser = extractUserInfo(sub);
+                    const subText = extractContent(sub);
+                    if (subText) {
+                        const isTarget = sub.contains(targetEl) || targetEl.contains(sub);
+                        posts.push({
+                            handle: `${subUser} (樓中樓 #${idx + 1}${isTarget ? ' - 反擊目標' : ''})`,
+                            content: subText
+                        });
+                    }
+                });
+
+                return posts.length > 0 ? posts : null;
             },
             scrapeContext: () => {
                 const posts = [];
                 const seen = new Set();
 
-                // 新版 / 舊版評論區選擇器
-                const replyItems = document.querySelectorAll('.reply-item, .sub-reply-item, bili-comment-thread-renderer, bili-comment-renderer');
-                replyItems.forEach(item => {
-                    const userEl = item.querySelector('.user-name, .reply-user, bili-comment-user-info, .name');
-                    const textEl = item.querySelector('.reply-content, .reply-content-container, bili-rich-text, .text-con, .text');
-                    const handle = userEl?.textContent?.trim() || 'B站用戶';
-                    const content = textEl?.textContent?.trim() || '';
+                const extractUserInfo = (el) => {
+                    if (!el) return '用戶';
+                    const userEl = queryDeep('bili-comment-user-info, .user-name, .sub-user-name, .reply-user, .name', el)[0] || el;
+                    return userEl?.textContent?.trim().replace(/\s+/g, ' ') || '用戶';
+                };
+                const extractContent = (el) => {
+                    if (!el) return '';
+                    const textEl = queryDeep('bili-rich-text, .reply-content, .text-con, .text, #contents', el)[0] || el;
+                    return (textEl?.innerText || textEl?.textContent || '').trim();
+                };
 
-                    if (content && content.length > 2 && !seen.has(content)) {
+                // 穿透遍歷頁面上所有主樓及其前列回覆
+                const threads = queryDeep('bili-comment-thread-renderer, .reply-item');
+                threads.forEach((th, tIdx) => {
+                    const rootCommentEl = queryDeep('bili-comment-renderer#comment, bili-comment-renderer, .root-reply-container, .reply-wrap', th)[0] || th;
+                    const handle = extractUserInfo(rootCommentEl) || `樓主 #${tIdx + 1}`;
+                    const content = extractContent(rootCommentEl);
+
+                    if (content && !seen.has(content)) {
                         seen.add(content);
-                        posts.push({ handle, content });
+                        posts.push({ handle: `${handle} (第${tIdx + 1}樓主評)`, content });
                     }
+
+                    // 附帶該樓前 2 則子回覆，加深脈絡理解
+                    const subReplies = queryDeep('bili-comment-reply-renderer, .sub-reply-item', th).slice(0, 2);
+                    subReplies.forEach((sub) => {
+                        const sUser = extractUserInfo(sub);
+                        const sText = extractContent(sub);
+                        if (sText && !seen.has(sText)) {
+                            seen.add(sText);
+                            posts.push({ handle: `  ↳ ${sUser} (樓中樓)`, content: sText });
+                        }
+                    });
                 });
-                return posts;
+                return posts.slice(0, 25);
             },
             injectButtons: (onSelectTarget) => {
-                const replyItems = document.querySelectorAll('.reply-item, .sub-reply-item, bili-comment-renderer');
-                replyItems.forEach(item => {
-                    if (item.querySelector('.uda-inline-btn')) return;
-                    const textEl = item.querySelector('.reply-content, .reply-content-container, bili-rich-text, .text-con, .text');
-                    const content = textEl?.textContent?.trim();
+                const extractUserInfo = (el) => {
+                    if (!el) return '用戶';
+                    const userEl = queryDeep('bili-comment-user-info, .user-name, .sub-user-name, .reply-user, .name', el)[0] || el;
+                    return userEl?.textContent?.trim().replace(/\s+/g, ' ') || '用戶';
+                };
+                const extractContent = (el) => {
+                    if (!el) return '';
+                    const textEl = queryDeep('bili-rich-text, .reply-content, .text-con, .text, #contents', el)[0] || el;
+                    return (textEl?.innerText || textEl?.textContent || '').trim();
+                };
+
+                // 輔助將按鈕掛載至 action-buttons 列或容器
+                const mountButton = (containerEl, btn) => {
+                    const actionBars = queryDeep('bili-comment-action-buttons-renderer, .reply-info, .info-wrap', containerEl);
+                    const bar = actionBars[0];
+                    if (bar) {
+                        if (bar.shadowRoot) {
+                            const innerTarget = bar.shadowRoot.querySelector('#buttons, .action-buttons, .buttons-wrapper') || bar.shadowRoot;
+                            innerTarget.appendChild(btn);
+                            return true;
+                        } else {
+                            bar.appendChild(btn);
+                            return true;
+                        }
+                    }
+                    if (containerEl.shadowRoot) {
+                        const fallbackTarget = containerEl.shadowRoot.querySelector('#action-buttons, #footer, #body') || containerEl.shadowRoot;
+                        fallbackTarget.appendChild(btn);
+                        return true;
+                    }
+                    containerEl.appendChild(btn);
+                    return true;
+                };
+
+                // 1. 在主樓注入按鈕 (穿透 Shadow DOM)
+                const rootReplies = queryDeep('bili-comment-renderer#comment, bili-comment-renderer, .reply-item > .root-reply-container, .reply-item > .reply-wrap');
+                rootReplies.forEach(rootEl => {
+                    const content = extractContent(rootEl);
+                    const user = extractUserInfo(rootEl) || '樓主';
                     if (!content || content.length < 2) return;
 
-                    const infoBar = item.querySelector('.reply-info, .info-wrap, .action-box, bili-comment-action-buttons-renderer');
-                    if (infoBar) {
-                        const btn = createActionBadge('⚔️ 筆戰', () => onSelectTarget(content));
-                        infoBar.appendChild(btn);
+                    // 若屬於我方發言，主動清理已有按鈕並跳過
+                    if (isSelfPost(user, rootEl)) {
+                        queryDeep('.uda-inline-btn', rootEl).forEach(b => b.remove());
+                        return;
                     }
+
+                    if (queryDeep('.uda-inline-btn', rootEl).length > 0) return;
+
+                    const btn = createActionBadge('⚔️ 筆戰', () => {
+                        const adapter = getActiveAdapter();
+                        const threadChain = adapter.traceThread ? adapter.traceThread(rootEl) : null;
+                        onSelectTarget(`@${user} (頂樓): ${content}`, threadChain);
+                    });
+                    mountButton(rootEl, btn);
+                });
+
+                // 2. 在樓中樓（子評論）注入按鈕 (穿透 Shadow DOM)
+                const subReplies = queryDeep('bili-comment-reply-renderer, .sub-reply-item');
+                subReplies.forEach(subEl => {
+                    const content = extractContent(subEl);
+                    const user = extractUserInfo(subEl) || '用戶';
+                    if (!content || content.length < 2) return;
+
+                    // 若屬於我方發言，主動清理已有按鈕並跳過
+                    if (isSelfPost(user, subEl)) {
+                        queryDeep('.uda-inline-btn', subEl).forEach(b => b.remove());
+                        return;
+                    }
+
+                    if (queryDeep('.uda-inline-btn', subEl).length > 0) return;
+
+                    const btn = createActionBadge('⚔️ 筆戰', () => {
+                        const adapter = getActiveAdapter();
+                        const threadChain = adapter.traceThread ? adapter.traceThread(subEl) : null;
+                        onSelectTarget(`@${user}: ${content}`, threadChain);
+                    });
+                    mountButton(subEl, btn);
                 });
             },
             fillComposer: (text) => {
-                // 尋找 B 站評論發布框
-                const composer = document.querySelector('textarea.reply-box-textarea, .ipt-txt, textarea[placeholder*="發一條友善的評論"], bili-comment-textarea textarea');
+                const textareas = queryDeep('textarea.reply-box-textarea, bili-comment-textarea textarea, textarea, .ipt-txt');
+                const composer = textareas.find(ta => !ta.readOnly && !ta.disabled && (ta.offsetParent !== null || ta.offsetWidth > 0)) || textareas[0];
                 if (composer) {
                     composer.focus();
                     composer.value = text;
@@ -276,6 +538,36 @@
         btn.type = 'button';
         btn.innerHTML = text;
         btn.title = '帶入此發言至筆戰戰情室';
+        btn.style.cssText = `
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 8px;
+            margin-left: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #ff4757;
+            background: rgba(255, 71, 87, 0.12);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            border-radius: 9999px;
+            cursor: pointer;
+            vertical-align: middle;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            line-height: 1.4;
+            z-index: 10;
+            transition: all 0.2s ease;
+        `;
+        btn.addEventListener('mouseenter', () => {
+            btn.style.background = 'rgba(255, 71, 87, 0.25)';
+            btn.style.color = '#ff2d42';
+            btn.style.borderColor = '#ff4757';
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.background = 'rgba(255, 71, 87, 0.12)';
+            btn.style.color = '#ff4757';
+            btn.style.borderColor = 'rgba(255, 71, 87, 0.3)';
+        });
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -565,8 +857,39 @@
             transition: opacity 0.3s ease;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
-        .uda-toast.uda-show {
-            opacity: 1;
+        .uda-model-chip {
+            display: inline-block;
+            font-size: 11px;
+            padding: 2px 7px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 4px;
+            color: #dfe4ea;
+            cursor: pointer;
+            transition: all 0.15s;
+            user-select: none;
+        }
+        .uda-model-chip:hover {
+            background: #ff4b2b;
+            color: #ffffff;
+            border-color: #ff4b2b;
+        }
+        .uda-model-chip.uda-active {
+            background: rgba(255, 75, 43, 0.25);
+            border-color: #ff4b2b;
+            color: #ff7675;
+            font-weight: 600;
+        }
+        .uda-fallback-banner {
+            background: rgba(255, 177, 66, 0.15);
+            border: 1px solid #ffb142;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #f1f2f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         @keyframes udaFadeIn {
             from { opacity: 0; transform: translateY(5px); }
@@ -592,9 +915,8 @@
         }, 2500);
     }
 
-    // --- 呼叫 Google Gemini API ---
-    function callGeminiAPI(apiKey, model, userStance, targetPost, threadContext, pageSummary, onSuccess, onError) {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    // --- 呼叫 Google Gemini API (支援多模型自動故障轉移 / 503 輪替機制) ---
+    function callGeminiAPI(apiKey, primaryModel, userStance, targetPost, threadContext, pageSummary, onStatusUpdate, onSuccess, onError) {
         const myHandle = GM_getValue(STORAGE_KEY_MY_HANDLE, DEFAULT_MY_HANDLE);
 
         let contextText = '';
@@ -610,7 +932,7 @@ ${pageSummary}
 
 【我方帳號】：@${myHandle}
 【我方核心立場與補充資訊】：
-${userStance ? userStance : '展示客觀數值與實機機制是正常討論；反駁不了事實就只能訴諸群體道德、貼標籤與扣帽子。對方是在掩飾無能與邏輯破產。'}
+${userStance ? userStance : '客觀分享事實與數據是正常討論；反駁不了事實就只能訴諸群體道德、急著抓態度扣帽子。對方本質上是自卑破防轉移為攻擊。'}
 
 【完整討論/串文脈絡】：
 ${contextText}
@@ -627,40 +949,65 @@ ${targetPost}
             contents: [{ role: 'user', parts: [{ text: promptText }] }],
             systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
             generationConfig: {
-                temperature: 0.8,
+                temperature: 0.85,
                 topK: 40,
                 topP: 0.95,
-                maxOutputTokens: 1200
+                maxOutputTokens: 4096
             }
         };
 
-        GM_xmlhttpRequest({
-            method: 'POST',
-            url: url,
-            headers: { 'Content-Type': 'application/json' },
-            data: JSON.stringify(requestBody),
-            onload: function (response) {
-                if (response.status >= 200 && response.status < 300) {
-                    try {
-                        const json = JSON.parse(response.responseText);
-                        const candidates = json.candidates;
-                        if (candidates && candidates.length > 0 && candidates[0].content && candidates[0].content.parts) {
-                            const generatedText = candidates[0].content.parts.map(p => p.text).join('');
-                            onSuccess(generatedText);
-                        } else {
-                            onError('Gemini API 未回傳有效候選內容：' + response.responseText);
-                        }
-                    } catch (e) {
-                        onError('解析回應 JSON 失敗：' + e.message);
-                    }
-                } else {
-                    onError(`API 請求失敗 (HTTP ${response.status})：${response.responseText}`);
-                }
-            },
-            onerror: function () {
-                onError('網路連線或 API 請求異常，請檢查網路狀態或 API Key。');
+        // 構建候選模型鏈：首選模型 -> 其餘備援模型
+        const candidateModels = [primaryModel, ...FALLBACK_MODELS.filter(m => m !== primaryModel)];
+        let attemptIdx = 0;
+
+        function attemptNextModel() {
+            if (attemptIdx >= candidateModels.length) {
+                onError(`所有備援模型（${candidateModels.join(', ')}）目前均處於尖峰高負載狀態 (503)，請稍後再試。`);
+                return;
             }
-        });
+
+            const currentModel = candidateModels[attemptIdx];
+            if (attemptIdx > 0 && onStatusUpdate) {
+                onStatusUpdate(`⚠️ 原模型負載過高 (503)，正在自動切換至備援模型【${currentModel}】...`);
+            }
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(currentModel)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url: url,
+                headers: { 'Content-Type': 'application/json' },
+                data: JSON.stringify(requestBody),
+                onload: function (response) {
+                    if (response.status >= 200 && response.status < 300) {
+                        try {
+                            const json = JSON.parse(response.responseText);
+                            const candidates = json.candidates;
+                            if (candidates && candidates.length > 0 && candidates[0].content && candidates[0].content.parts) {
+                                const generatedText = candidates[0].content.parts.map(p => p.text).join('');
+                                onSuccess(generatedText, currentModel, attemptIdx > 0);
+                            } else {
+                                onError('Gemini API 未回傳有效候選內容：' + response.responseText);
+                            }
+                        } catch (e) {
+                            onError('解析回應 JSON 失敗：' + e.message);
+                        }
+                    } else if (response.status === 503 || response.status === 429) {
+                        // 遇到 503 (High demand) 或 429 (Rate Limit)，自動嘗試下一個備援模型
+                        console.warn(`[UDA] 模型 ${currentModel} 返回 ${response.status}，嘗試自動切換備援模型...`);
+                        attemptIdx++;
+                        setTimeout(attemptNextModel, 1000);
+                    } else {
+                        onError(`API 請求失敗 (HTTP ${response.status})：${response.responseText}`);
+                    }
+                },
+                onerror: function () {
+                    onError('網路連線或 API 請求異常，請檢查網路連線或 API Key。');
+                }
+            });
+        }
+
+        attemptNextModel();
     }
 
     // --- 建立戰情室側邊面板 ---
@@ -694,8 +1041,18 @@ ${targetPost}
                             <input type="password" id="uda-api-key" class="uda-input" placeholder="AIzaSy..." />
                         </div>
                         <div class="uda-form-group">
-                            <label class="uda-label">Gemini 模型名稱</label>
-                            <input type="text" id="uda-model-name" class="uda-input" placeholder="gemini-2.5-flash" />
+                            <div class="uda-label">
+                                <span>Gemini 模型名稱</span>
+                                <span style="font-size: 11px; color: #74b9ff;">點選切換：</span>
+                            </div>
+                            <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 5px;">
+                                <span class="uda-model-chip" data-model="gemini-3.8-flash" title="3.8 旗艦推理，戰力最高">3.8-flash (推薦)</span>
+                                <span class="uda-model-chip" data-model="gemini-3.5-flash" title="3.5 高能效主力">3.5-flash</span>
+                                <span class="uda-model-chip" data-model="gemini-3.0-flash" title="3.0 極致穩定防503">3.0-flash</span>
+                                <span class="uda-model-chip" data-model="gemini-2.5-flash" title="2.5 經典模型">2.5-flash</span>
+                                <span class="uda-model-chip" data-model="gemini-2.0-flash" title="2.0 極速備援">2.0-flash</span>
+                            </div>
+                            <input type="text" id="uda-model-name" class="uda-input" placeholder="gemini-3.8-flash" />
                         </div>
                         <div class="uda-form-group">
                             <label class="uda-label">我的帳號名稱 (Handle)</label>
@@ -748,7 +1105,22 @@ ${targetPost}
         apiKeyInput.value = GM_getValue(STORAGE_KEY_API_KEY, '');
         modelInput.value = GM_getValue(STORAGE_KEY_MODEL, DEFAULT_MODEL);
         handleInput.value = GM_getValue(STORAGE_KEY_MY_HANDLE, DEFAULT_MY_HANDLE);
-        stanceInput.value = GM_getValue(STORAGE_KEY_CUSTOM_STANCE, '六命一精開自動過是客觀戰力與機制測試之一；反駁不了數據就只能訴諸群體道德批判，到底誰才是邏輯死角。');
+        stanceInput.value = GM_getValue(STORAGE_KEY_CUSTOM_STANCE, '客觀分享事實與數據是正常討論；反駁不了事實就只能訴諸群體道德、急著抓態度扣帽子。對方本質上是自卑破防轉移為攻擊。');
+
+        // 模型快捷標籤點擊事件
+        const chips = sidebar.querySelectorAll('.uda-model-chip');
+        function updateChipActive(activeModel) {
+            chips.forEach(c => {
+                c.classList.toggle('uda-active', c.dataset.model === activeModel);
+            });
+        }
+        chips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                modelInput.value = chip.dataset.model;
+                updateChipActive(chip.dataset.model);
+            });
+        });
+        updateChipActive(modelInput.value);
 
         // 事件綁定
         sidebar.querySelector('#uda-close-btn').addEventListener('click', closeSidebar);
@@ -773,14 +1145,19 @@ ${targetPost}
         // 清空目標
         sidebar.querySelector('#uda-clear-target').addEventListener('click', () => {
             sidebar.querySelector('#uda-target-post').value = '';
+            pinnedThreadContext = null;
+            const adapter = getActiveAdapter();
+            const posts = adapter.scrapeContext();
+            sidebar.querySelector('#uda-post-count').textContent = posts.length;
         });
 
         // 擷取脈絡按鈕
         sidebar.querySelector('#uda-scrape-btn').addEventListener('click', () => {
             const adapter = getActiveAdapter();
+            pinnedThreadContext = null;
             const posts = adapter.scrapeContext();
             sidebar.querySelector('#uda-post-count').textContent = posts.length;
-            showToast(`📥 [${adapter.name}] 已擷取 ${posts.length} 則討論脈絡`);
+            showToast(`📥 [${adapter.name}] 已重新掃描全頁 ${posts.length} 則討論脈絡`);
         });
 
         // 立場變更自動保存
@@ -794,7 +1171,9 @@ ${targetPost}
         return sidebar;
     }
 
-    function openSidebar(initialTargetText = '') {
+    let pinnedThreadContext = null;
+
+    function openSidebar(initialTargetText = '', threadChain = null) {
         const sb = createSidebar();
         const adapter = getActiveAdapter();
         sb.querySelector('#uda-platform-indicator').textContent = adapter.name;
@@ -803,9 +1182,15 @@ ${targetPost}
         if (initialTargetText) {
             sb.querySelector('#uda-target-post').value = initialTargetText;
         }
-        // 自動更新上下文數
-        const posts = adapter.scrapeContext();
-        sb.querySelector('#uda-post-count').textContent = posts.length;
+
+        // 優先採用特定鎖定的爬樓脈絡
+        pinnedThreadContext = threadChain;
+        if (pinnedThreadContext && pinnedThreadContext.length > 0) {
+            sb.querySelector('#uda-post-count').textContent = `${pinnedThreadContext.length} (已鎖定本樓脈絡)`;
+        } else {
+            const posts = adapter.scrapeContext();
+            sb.querySelector('#uda-post-count').textContent = posts.length;
+        }
     }
 
     function closeSidebar() {
@@ -902,13 +1287,13 @@ ${targetPost}
         }
 
         const adapter = getActiveAdapter();
-        const threadContext = adapter.scrapeContext();
+        const threadContext = (pinnedThreadContext && pinnedThreadContext.length > 0) ? pinnedThreadContext : adapter.scrapeContext();
         const pageSummary = adapter.getPageContext();
 
         outputContainer.innerHTML = `
             <div style="text-align: center; padding: 24px; color: #ff7675; font-size: 13px;">
                 <div style="font-size: 26px; margin-bottom: 8px; animation: spin 1s linear infinite;">⏳</div>
-                正在以米哈遊言詞交鋒哲學拆解邏輯漏洞中...
+                正在精準解構對方邏輯漏洞並組織犀利回擊中...
             </div>
         `;
 
@@ -919,13 +1304,24 @@ ${targetPost}
             targetPost,
             threadContext,
             pageSummary,
-            (responseText) => {
-                renderDebateResult(responseText);
+            (statusMsg) => {
+                outputContainer.innerHTML = `
+                    <div style="text-align: center; padding: 24px; color: #ffb142; font-size: 13px; line-height: 1.6;">
+                        <div style="font-size: 26px; margin-bottom: 8px;">🔄</div>
+                        ${escapeHTML(statusMsg)}
+                    </div>
+                `;
+            },
+            (responseText, usedModel, isFallback) => {
+                renderDebateResult(responseText, usedModel, isFallback);
             },
             (errorMsg) => {
                 outputContainer.innerHTML = `
-                    <div style="padding: 12px; background: rgba(255, 71, 87, 0.15); border: 1px solid #ff4757; border-radius: 8px; color: #ff6b81; font-size: 13px;">
-                        ❌ 生成失敗：${errorMsg}
+                    <div style="padding: 12px; background: rgba(255, 71, 87, 0.15); border: 1px solid #ff4757; border-radius: 8px; color: #ff6b81; font-size: 13px; line-height: 1.5;">
+                        ❌ 生成失敗：${escapeHTML(errorMsg)}
+                        <div style="margin-top: 8px; font-size: 11.5px; color: #a4b0be;">
+                            💡 建議：可點開上方「⚙️ API 與身分設定」，點選 <b>1.5-flash</b> 或 <b>2.0-flash</b> 切換為最穩定的模型。
+                        </div>
                     </div>
                 `;
             }
@@ -933,19 +1329,37 @@ ${targetPost}
     }
 
     // --- 渲染生成結果 ---
-    function renderDebateResult(markdownText) {
+    function renderDebateResult(markdownText, usedModel, isFallback) {
         const outputContainer = sidebar.querySelector('#uda-output-container');
         outputContainer.innerHTML = '';
 
-        const sections = markdownText.split(/(?=###\s*選項|【回擊選項】|【對手邏輯漏洞剖析】)/g);
+        // 若發生自動切換備援模型，顯示提示條
+        if (isFallback) {
+            const banner = document.createElement('div');
+            banner.className = 'uda-fallback-banner';
+            banner.innerHTML = `
+                <span>⚡ 原模型暫時擁塞 (503)，已自動切換至備援模型 <b>${escapeHTML(usedModel)}</b> 產出！</span>
+                <button class="uda-pill-btn" id="uda-set-fallback-default" style="font-size: 11px; padding: 2px 6px;">設為預設</button>
+            `;
+            banner.querySelector('#uda-set-fallback-default').addEventListener('click', () => {
+                GM_setValue(STORAGE_KEY_MODEL, usedModel);
+                sidebar.querySelector('#uda-model-name').value = usedModel;
+                showToast(`✅ 已將 ${usedModel} 設為預設模型！`);
+                banner.style.display = 'none';
+            });
+            outputContainer.appendChild(banner);
+        }
+
+        // 增強型正則切分器：支援 ### 選項、**選項、選項 A/B/C、選項 1/2/3、方案 A/B/C
+        const sections = markdownText.split(/(?=(?:###|\*\*|【)\s*(?:選項|方案)|\b(?:選項|方案)\s*[A-Ca-c1-3]|【對手邏輯漏洞剖析】|【回擊選項】)/gi);
         let analysisBlock = '';
         const options = [];
 
         sections.forEach(sec => {
             const trimmed = sec.trim();
-            if (trimmed.includes('【對手邏輯漏洞剖析】')) {
-                analysisBlock = trimmed.replace('【對手邏輯漏洞剖析】', '').trim();
-            } else if (trimmed.startsWith('### 選項') || trimmed.includes('選項 A') || trimmed.includes('選項 B') || trimmed.includes('選項 C')) {
+            if (trimmed.includes('邏輯漏洞剖析') || trimmed.includes('邏輯漏洞')) {
+                analysisBlock = trimmed.replace(/^.*?(?:邏輯漏洞剖析|邏輯漏洞)[】\s:]*/i, '').trim();
+            } else if (/(?:選項|方案)\s*[A-Ca-c1-3]/i.test(trimmed)) {
                 options.push(trimmed);
             }
         });
@@ -957,6 +1371,7 @@ ${targetPost}
             analysisCard.innerHTML = `
                 <div class="uda-result-title">
                     <span>🔍 對手邏輯漏洞剖析</span>
+                    <span style="font-size: 11px; color: #a4b0be;">${usedModel ? `[${escapeHTML(usedModel)}]` : ''}</span>
                 </div>
                 <div style="font-size: 13px; color: #ced6e0; line-height: 1.5; white-space: pre-wrap;">${escapeHTML(analysisBlock)}</div>
             `;
@@ -967,8 +1382,16 @@ ${targetPost}
         if (options.length > 0) {
             options.forEach((optText) => {
                 const lines = optText.split('\n');
-                const title = lines[0].replace(/^###\s*/, '').trim();
-                const contentLines = lines.slice(1).join('\n').replace(/^>\s*/gm, '').trim();
+                let title = lines[0].replace(/^[#*【>\s]+|[】*]+/g, '').trim();
+                let contentLines = lines.slice(1).join('\n')
+                    .replace(/^>\s*/gm, '')
+                    .replace(/\*+精煉.*?句.*?\*+/gi, '')
+                    .trim();
+
+                if (!contentLines && lines.length === 1) {
+                    contentLines = title;
+                    title = '回擊論點';
+                }
 
                 const card = document.createElement('div');
                 card.className = 'uda-result-card';
@@ -1004,19 +1427,34 @@ ${targetPost}
                 outputContainer.appendChild(card);
             });
         } else {
-            // 備援輸出
+            // 備援輸出 (附帶填入回覆功能)
+            const cleanText = markdownText.replace(/\*+精煉.*?句.*?\*+/gi, '').trim();
             const rawCard = document.createElement('div');
             rawCard.className = 'uda-result-card';
             rawCard.innerHTML = `
-                <div class="uda-result-title"><span>戰術產出</span></div>
-                <div class="uda-result-text">${escapeHTML(markdownText)}</div>
+                <div class="uda-result-title">
+                    <span>⚔️ 戰術產出</span>
+                    <span style="font-size: 11px; color: #a4b0be;">${usedModel ? `[${escapeHTML(usedModel)}]` : ''}</span>
+                </div>
+                <div class="uda-result-text">${escapeHTML(cleanText)}</div>
                 <div class="uda-result-actions">
                     <button class="uda-pill-btn" id="uda-raw-copy">📋 複製全部</button>
+                    <button class="uda-pill-btn uda-fill-btn" id="uda-raw-fill" style="background: rgba(255, 75, 43, 0.2); border-color: #ff4b2b; color: #ff7675;">🚀 填入回覆</button>
                 </div>
             `;
             rawCard.querySelector('#uda-raw-copy').addEventListener('click', () => {
-                navigator.clipboard.writeText(markdownText);
+                navigator.clipboard.writeText(cleanText);
                 showToast('📋 已複製至剪貼簿！');
+            });
+            rawCard.querySelector('#uda-raw-fill').addEventListener('click', () => {
+                const adapter = getActiveAdapter();
+                const success = adapter.fillComposer(cleanText);
+                if (success) {
+                    showToast(`✅ 已自動填入 ${adapter.name} 輸入框！`);
+                } else {
+                    navigator.clipboard.writeText(cleanText);
+                    showToast('📋 已複製至剪貼簿（請手動貼上）');
+                }
             });
             outputContainer.appendChild(rawCard);
         }
@@ -1068,8 +1506,8 @@ ${targetPost}
     function runAdapterInjection() {
         const adapter = getActiveAdapter();
         if (adapter && adapter.injectButtons) {
-            adapter.injectButtons((targetText) => {
-                openSidebar(targetText);
+            adapter.injectButtons((targetText, threadChain) => {
+                openSidebar(targetText, threadChain);
             });
         }
     }

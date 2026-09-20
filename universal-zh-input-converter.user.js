@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Universal-繁簡輸入轉換器-Alt-S
 // @namespace    https://github.com/fine5351/
-// @version      1.1
-// @description  在任何網頁打字時將繁體中文快速轉為簡體輸入：支援輸入框原地快捷鍵（Alt+S）轉換、反白文字快捷轉換複製，以及隨身浮動小視窗（Alt+Shift+S，支援純字形/詞彙轉換即打即轉與一鍵複製）
+// @version      1.3
+// @description  在任何網頁打字時將繁體中文快速轉為簡體輸入：支援 Shadow DOM 與 B 站評論框輸入原地快捷鍵（Alt+S）轉換、反白文字快捷轉換複製，以及隨身浮動小視窗（Alt+Shift+S，支援純字形/詞彙轉換即打即轉與一鍵複製）
 // @author       fine5351
 // @match        *://*/*
 // @run-at       document-end
@@ -310,9 +310,69 @@
         return false;
     }
 
+    // 遞迴穿透尋找子樹中的 textarea 或 input (深層穿透 Shadow DOM)
+    function findDeepInput(root) {
+        if (!root) return null;
+        if (root.tagName === 'TEXTAREA' || (root.tagName === 'INPUT' && root.type !== 'file' && root.type !== 'password')) {
+            return root;
+        }
+        if (root.isContentEditable || root.getAttribute('contenteditable') === 'true') {
+            return root;
+        }
+
+        // 搜尋當前層
+        const direct = root.querySelector?.('textarea, input:not([type="password"]):not([type="file"]), [contenteditable="true"]');
+        if (direct) return direct;
+
+        // 穿透 shadowRoot 搜尋
+        if (root.shadowRoot) {
+            const shadowDirect = root.shadowRoot.querySelector?.('textarea, input:not([type="password"]):not([type="file"]), [contenteditable="true"]');
+            if (shadowDirect) return shadowDirect;
+
+            const allInShadow = root.shadowRoot.querySelectorAll?.('*') || [];
+            for (let i = 0; i < allInShadow.length; i++) {
+                const sub = findDeepInput(allInShadow[i]);
+                if (sub) return sub;
+            }
+        }
+
+        // 穿透子節點的 shadowRoot
+        const allChildren = root.querySelectorAll?.('*') || [];
+        for (let i = 0; i < allChildren.length; i++) {
+            if (allChildren[i].shadowRoot) {
+                const sub = findDeepInput(allChildren[i].shadowRoot);
+                if (sub) return sub;
+            }
+        }
+
+        return null;
+    }
+
+    // 穿透 Shadow DOM 取得真實聚焦之輸入框元素 (支援 B 站、YouTube 等 Web Components)
+    function getDeepActiveElement() {
+        let el = document.activeElement;
+        while (el && el.shadowRoot && el.shadowRoot.activeElement) {
+            el = el.shadowRoot.activeElement;
+        }
+        if (!el) return null;
+
+        const tag = el.tagName ? el.tagName.toLowerCase() : '';
+        if (tag === 'textarea' || tag === 'input' || el.isContentEditable || el.getAttribute('contenteditable') === 'true') {
+            return el;
+        }
+
+        // 若當前元素為自訂元件（如 B 站 bili-comment-box / bili-comment-textarea）
+        if (tag.includes('comment') || tag.includes('reply') || tag.includes('box') || tag.includes('textarea') || el.classList?.contains('reply-box-textarea')) {
+            const deep = findDeepInput(el);
+            if (deep) return deep;
+        }
+
+        return el;
+    }
+
     // 執行原地轉換的主路由
     function triggerInPlaceConversion() {
-        const active = document.activeElement;
+        const active = getDeepActiveElement();
 
         // 檢查是否為密碼框，如果是則出於安全考慮略過
         if (active && active.tagName === 'INPUT' && active.type && active.type.toLowerCase() === 'password') {
@@ -326,7 +386,7 @@
         }
 
         // 2. contenteditable 元素
-        if (active && active.isContentEditable) {
+        if (active && (active.isContentEditable || active.getAttribute('contenteditable') === 'true')) {
             handleContentEditable(active);
             return true;
         }
