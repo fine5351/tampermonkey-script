@@ -242,7 +242,7 @@
 
         const favLabel = await waitForElement('尋找默認收藏夾', '.group-list label', (label) => {
             const favSpan = label.querySelector('span.fav-title');
-            return favSpan && (favSpan.title === '默认收藏夹' || favSpan.textContent.includes('默认收藏夹'));
+            return favSpan && (favSpan.title === '默认收藏夹' || favSpan.textContent.includes('默认收藏夹') || favSpan.textContent.includes('默認收藏夾') || favSpan.textContent.includes('預設收藏夾'));
         });
 
         const checkbox = favLabel.querySelector('input[type="checkbox"]');
