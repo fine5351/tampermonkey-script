@@ -60,6 +60,14 @@
   - 若不可避免需要在全域共用按鍵組合（例如輸入輔助與影片截圖），必須實作嚴密的上下文情境判斷（如檢查 `document.activeElement` 是否為輸入框、是否有選取文字等）；當情境不符時必須放行事件（嚴禁濫用 `e.preventDefault()` 與 `e.stopPropagation()`），確保其他腳本功能不受阻礙。
 - **Hub 同步義務 (Hub Synchronization Obligation)**：任何快捷鍵新增或調整完成後，**必須同步更新 `universal-shortcut-hub.user.js` 中的 `SCRIPT_REGISTRY`**，確保使用者透過指揮中心（`Alt + Shift + /`）所查閱之清單永遠保持 100% 準確。
 
+### 3.6 內容過濾與網格屏蔽規範 (Content Filtering & Grid Shielding)
+- **多模態切換設計 (Multi-mode Support)**：處理標籤、關鍵字或分類過濾需求時，應優先考慮「整卡隱藏 (Card Filter)」與「純標籤隱藏 (Tag-only Hide)」兩種情境，並提供明確之切換機制（如設定彈窗或懸浮徽章）。
+- **網格排版自適應與邊界防護 (Grid Reflow & Boundary Protection)**：
+  - 隱藏卡片時，應透過 `closest()` 精準定位至網格單元容器（如 Bootstrap 的 `col-*`），確保其餘項目能自然遞補流暢排版。
+  - **防誤選防護**：必須校驗容器內是否包含多個獨立項目（如多個作品連結），嚴禁誤選至包含多項目的頂層容器（如 `col-12` 或整列 `.row`）。
+- **狀態可逆性 (Reversible State)**：隱藏操作一律使用專屬 CSS Class（如 `.c18-filtered-hidden`）與 `data-*` 屬性標記，確保關閉過濾時能一鍵乾淨還原。
+- **CSP 與 Trusted Types 防護**：動態建立 UI 或彈窗時，優先實作 Trusted Types 策略或 DOMParser 安全退避機制，防範嚴格 CSP 網站阻擋。
+
 ---
 
 ## 4. 檔案命名與目錄結構 (File Conventions)
@@ -69,6 +77,9 @@
   - 通用腳本：`universal-<feature>[-<hotkey>].user.js`（例如 `universal-url-cleaner.user.js`、`universal-video-block.user.js`）
 - **引用路徑標準**：
   - 專案內部所有配置、文檔、規則與程式碼註解中之檔案引用與路徑標註，**一律使用跨平台相對路徑（以 POSIX 正斜線 `/` 表示）**，嚴格禁止寫入特定本機或作業系統絕對路徑。
+- **編碼與 BOM 防護 (UTF-8 without BOM)**：
+  - 所有腳本與設定檔案一律強制採用 **UTF-8 無 BOM（UTF-8 without BOM）** 編碼。
+  - 在 Windows 或自動化命令環境進行檔案寫入與轉換時，嚴禁引入 `\uFEFF` 位元組順序標記，並維持原檔案既有之換行符（LF / CRLF）一致性。
 
 ---
 
