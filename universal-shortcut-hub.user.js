@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Universal-全域快捷鍵速查與指揮中心-Alt-Shift-Slash
 // @namespace    https://github.com/
-// @version      1.7
+// @version      1.8
 // @description  按 F1、Alt+/、Alt+Shift+/ 或點擊右下角 ⚡ 圖示隨時呼叫半透明懸浮面板，即時偵測目前網址並列出已生效的所有 UserScript 快捷鍵與操作指南
 // @author       Antigravity
 // @match        *://*/*
@@ -51,6 +51,14 @@
             items: [
                 { key: "Shift + F8", name: "批量加入播放清單", desc: "彈出自訂面板批次勾選或取消多個播放清單，無需手動等待" },
                 { key: "Shift + F9", name: "錯誤資訊檢舉", desc: "自動點選檢舉、錯誤資訊並填寫官方未公布理由" }
+            ]
+        },
+        {
+            category: "18comic / 禁漫天堂專用",
+            matches: (h) => h.includes('18comic') || h.includes('jmcomic'),
+            items: [
+                { key: "Alt + H", name: "韓漫過濾設定面板", desc: "切換韓漫過濾開關（隱藏整部漫畫 / 僅隱藏標籤），自訂關鍵字與檢視過濾計數" },
+                { key: "常駐浮標", name: "韓漫過濾計數徽章", desc: "左下角即時顯示當前頁面過濾之韓漫數量，點擊直接切換開關" }
             ]
         },
         {
