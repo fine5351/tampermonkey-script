@@ -4,7 +4,7 @@
 // @version      1.0
 // @description  B站全能互動助手：影片/活動頁按 F8 一鍵三連 (點贊/收藏/發布動態)；直播間按 F8 開啟/關閉自動點讚，按 F9 設定並開啟/關閉定時發送彈幕，附帶輕量狀態通知
 // @author       You / Antigravity
-// @match        https://www.bilibili.com/video/*
+// @match        https://www.bilibili.com/*/video/*
 // @match        https://www.bilibili.com/list/*
 // @match        https://www.bilibili.com/festival/*
 // @match        https://live.bilibili.com/*
