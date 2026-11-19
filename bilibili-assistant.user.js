@@ -1,14 +1,12 @@
 // ==UserScript==
 // @name         Bilibili-綜合互動助手-F8-F9
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  B站全能互動助手：影片/活動頁按 F8 一鍵三連 (點贊/收藏/發布動態)；直播間按 F8 開啟/關閉自動點讚，按 F9 設定並開啟/關閉定時發送彈幕，附帶輕量狀態通知
 // @author       You / Antigravity
-// @match        https://www.bilibili.com/*/video/*
-// @match        https://www.bilibili.com/list/*
-// @match        https://www.bilibili.com/festival/*
+// @match        https://www.bilibili.com/*
 // @match        https://live.bilibili.com/*
-// @match        https://t.bilibili.com/share/card/index?*
+// @match        https://t.bilibili.com/share/card/index*
 // @run-at       document-end
 // @grant        none
 // ==/UserScript==
@@ -19,6 +17,8 @@
     const host = window.location.hostname;
     const isLive = host.includes('live.bilibili.com');
     const isShareIframe = host.includes('t.bilibili.com') && window.location.pathname.includes('/share/card/index');
+
+    console.log(`[Bilibili 助手] v1.1 已載入: ${window.location.href}`);
 
     // ==========================================
     // 0. 通用 Toast 狀態通知
@@ -178,23 +178,23 @@
             }
         }
 
-        // 直播間按鍵監聽
+        // 直播間按鍵監聽 (使用捕獲階段避免被播放器攔截)
         window.addEventListener('keydown', function (e) {
             const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
             const isEditing = activeTag === 'input' || activeTag === 'textarea' || document.activeElement?.isContentEditable;
 
             // F8: 點讚開關 (避免輸入時誤觸)
-            if (e.key === 'F8' && !e.shiftKey && !e.ctrlKey && !e.altKey && !isEditing) {
+            if ((e.code === 'F8' || e.key === 'F8') && !e.shiftKey && !e.ctrlKey && !e.altKey && !isEditing) {
                 e.preventDefault();
                 toggleAutoLike();
             }
 
             // F9: 彈幕開關
-            if (e.key === 'F9' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+            if ((e.code === 'F9' || e.key === 'F9') && !e.shiftKey && !e.ctrlKey && !e.altKey) {
                 e.preventDefault();
                 toggleAutoDanmaku();
             }
-        });
+        }, true);
 
         window.addEventListener('beforeunload', () => {
             if (likeTimer) clearInterval(likeTimer);
@@ -275,15 +275,24 @@
         shareBtn.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true, cancelable: true }));
     }
 
-    // 影片頁按鍵監聽
+    // 檢查當前是否為影片 / 清單 / 活動頁 (相容 SPA 路由切換)
+    function isSupportedVideoPage() {
+        const path = window.location.pathname;
+        return path.startsWith('/video/') || path.includes('/video/') || path.startsWith('/list/') || path.startsWith('/festival/');
+    }
+
+    // 影片頁按鍵監聽 (使用捕獲階段避免被播放器攔截)
     let isProcessing = false;
-    document.addEventListener('keydown', async function (e) {
+    window.addEventListener('keydown', async function (e) {
+        if (!isSupportedVideoPage()) return;
+
         const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
         if (activeTag === 'input' || activeTag === 'textarea' || document.activeElement?.isContentEditable) {
             return;
         }
 
-        if (e.key === 'F8' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+        if ((e.code === 'F8' || e.key === 'F8') && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+            e.preventDefault();
             if (isProcessing) {
                 showToast('⚠️ 三連流程正在執行中，請稍候...');
                 return;
@@ -304,5 +313,5 @@
                 isProcessing = false;
             }
         }
-    });
+    }, true);
 })();
